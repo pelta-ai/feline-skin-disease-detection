@@ -1,0 +1,17 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "python.testing.pytestArgs": [
+        "test"
+    ],
+    "python.testing.unittestEnabled": true,
+    "python.testing.pytestEnabled": false,
+    "python.testing.discovery.useLegacy": true,
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        ".",
+        "-p",
+        "*test*.py"
+    ],
+    "python.analysis.extraPaths": ["./lib"]
+}

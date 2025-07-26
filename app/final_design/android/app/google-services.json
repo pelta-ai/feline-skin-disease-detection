@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "147767525014",
+    "project_id": "feline-skin-disease-detection",
+    "storage_bucket": "feline-skin-disease-detection.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147767525014:android:0bfb8e6098d6ddc9a78cb7",
+        "android_client_info": {
+          "package_name": "com.example.final_design"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSqRtTnLX8XhHVK365uUDNyLD8Xn7AMCQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
