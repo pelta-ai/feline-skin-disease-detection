@@ -13,4 +13,4 @@ def rename_files_in_directory(directory_path, new_name_prefix, counter_start_val
             os.rename(full_path, new_full_path)
             counter += 1
 
-rename_files_in_directory('data\\images\\scabies', 'scabies_', 2647)
+rename_files_in_directory('data\\images\\healthy', 'healthy_', 1)

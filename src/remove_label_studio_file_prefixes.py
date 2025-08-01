@@ -10,4 +10,4 @@ def remove_label_studio_prefixes_in_directory(directory_path, prefix_length=9):
             new_full_path = os.path.join(directory_path, new_name)
             os.rename(full_path, new_full_path)
 
-remove_label_studio_prefixes_in_directory('data\\labels\\acne')
+remove_label_studio_prefixes_in_directory('data\\labels\\lumps_and_bumps')
