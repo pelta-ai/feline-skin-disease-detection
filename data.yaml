@@ -1,0 +1,4 @@
+train: sample_model_data/images/train
+val: sample_model_data/images/val
+nc: 3
+names: ['Acne', 'Flea Allergy', 'Lumps and Bumps']
