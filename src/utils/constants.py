@@ -12,5 +12,5 @@ CNN_DATA_NPZ_NAME = "feline_skin_disease_sample_data"
 CNN_MODEL_PATH = TRAINED_MODELS_PATH + "\\sample_cnn.keras"
 YOLO_MODEL_PATH = TRAINED_MODELS_PATH + "\\sample_yolo.pt"
 
-#BRG Values
+#BGR Values
 DISEASE_COLORS = {'acne': (66, 66, 245), 'flea_allergy': (66, 170, 245), 'lumps_and_bumps': (66, 239, 245)}

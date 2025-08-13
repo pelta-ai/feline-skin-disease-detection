@@ -52,4 +52,4 @@ def predict_from_image_array(arr, model):
     label = model.predict_label(arr)
     return label
 
-generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_1.jpeg')
+generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_1.jpg')
