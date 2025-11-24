@@ -62,6 +62,23 @@ def get_file_url():
     except Exception as e:
         print(f"Error generating URL: {e}")
         return jsonify({'error': str(e)}), 500
+    
+@app.post("/download-file")
+def download_from_s3_api():
+    #user_id = request.form["user_id"]    
+    file_name = request.form["file_name"]
+    s3_key = request.form["s3_key"]      
+
+    local_path = s3.download_file(file_name, s3_key)
+
+    if not local_path:
+        return jsonify({"status": "error", "message": "download_failed"}), 500
+
+    return jsonify({"status": "ok", "local_path": local_path}), 200
+
+@app.get("/get-today-date")
+def get_today_date_api():
+    return {"date": s3.get_today_date()}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

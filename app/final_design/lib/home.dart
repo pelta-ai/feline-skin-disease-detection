@@ -104,10 +104,14 @@ class _HomeState extends State<Home> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
-      setState(() {
+      setState(() async {
         _imageFile = pickedFile;
         File file = File(_imageFile!.path);
-        S3ApiService.uploadFile(file, "$CURRENT_USER");
+        await S3ApiService.uploadFile(file, "$CURRENT_USER");
+        await S3ApiService.triggerDownloadFromS3(
+          pickedFile: file,
+          userId: "$CURRENT_USER",
+        );
       });
     }
 
