@@ -1,14 +1,16 @@
-import os, sys
+import os, sys, tempfile
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from PIL import Image
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants
 from src.convolutional_neural_network import ConvolutionNeuralNetwork as cnn
 
-def generate_final_image(image_path, cnn_model_path=constants.CNN_MODEL_PATH, yolo_model_path=constants.YOLO_MODEL_PATH):
+
+def generate_final_image(image_path, cnn_model_path=constants.CNN_MODEL_PATH, yolo_model_path=constants.YOLO_MODEL_PATH, output_dir=None):
     model = YOLO(yolo_model_path)
     if not os.path.exists(cnn_model_path):
         raise FileNotFoundError(f'CNN model file not found: {cnn_model_path}')
@@ -20,36 +22,66 @@ def generate_final_image(image_path, cnn_model_path=constants.CNN_MODEL_PATH, yo
     except Exception as e:
         raise RuntimeError(f'Failed to load full Keras model from {cnn_model_path}. Make sure it was saved with model.save(...). Error: {e}')
 
+
+    # validate input image
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f'Input image not found: {image_path}')
     image = cv2.imread(image_path)
+    if image is None:
+        raise RuntimeError(f'cv2 failed to load image: {image_path}')
+    
     img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
- 
+
     results = model(image_path)
-    boxes = results[0].boxes.xyxy.cpu().numpy()  # (x1, y1, x2, y2)
+    if not results or results[0].boxes is None or results[0].boxes.xyxy is None:
+        boxes = np.array([])
+    else:
+        boxes = results[0].boxes.xyxy.cpu().numpy()
 
-    for box in boxes:
-        x1, y1, x2, y2 = map(int, box)
+    labels = []
 
-        cropped = img_rgb[y1:y2, x1:x2]
-        if cropped.size == 0:
-            continue
+    if boxes.size > 0:
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box)
 
-        img_pil = Image.fromarray(cropped).resize((224, 224)).convert('RGB')
-        arr = np.array(img_pil)
-        label = predict_from_image_array(arr, cnn_model)
 
-        cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 2)
+            cropped = img_rgb[y1:y2, x1:x2]
+            if cropped.size == 0:
+                continue
 
+
+            img_pil = Image.fromarray(cropped).resize((224, 224)).convert('RGB')
+            arr = np.array(img_pil)
+            label = predict_from_image_array(arr, cnn_model)
+            labels.append(label)
+
+
+            if label in constants.DISEASE_COLORS:
+                cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 2)
+            else:
+                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 0), 2)
+    else:
+        labels.append("healthy")
+
+
+    # after drawing boxes, compute output_path in absolute output_dir
     base_name = os.path.basename(image_path)
     base_name_without_extension = os.path.splitext(base_name)[0]
     output_path = constants.TEST_RESULTS_PATH + '\\' + base_name_without_extension + '.jpg'
     cv2.imwrite(output_path, image)
     print(f'Saved: {output_path}')
 
-    return label
+
+    return {
+        'label': labels[0] if labels else None,
+        'output_path': output_path,
+    }
+
 
 def predict_from_image_array(arr, model):
     # arr should be (224, 224, 3)
     label = model.predict_label(arr)
     return label
+
 
 generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_1.jpg')
