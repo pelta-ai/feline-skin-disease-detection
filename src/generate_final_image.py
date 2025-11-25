@@ -71,9 +71,7 @@ def generate_final_image(image_path, output_dir=constants.TEMP_FOLDER_ANNOTATED_
 
 
             if label in constants.DISEASE_COLORS:
-                cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 2)
-            else:
-                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 0), 2)
+                cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 10)
     else:
         labels.append("healthy")
 
@@ -92,6 +90,8 @@ def generate_final_image(image_path, output_dir=constants.TEMP_FOLDER_ANNOTATED_
         main_label = max(set(labels), key=labels.count)
     else:
         main_label = "healthy"
+
+    print(main_label)
 
     return {
         "label": main_label,
