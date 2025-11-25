@@ -13,14 +13,19 @@ from sklearn.preprocessing import LabelEncoder
 
 import utils.constants as constants
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+def _abs(path):
+    return path if os.path.isabs(path) else os.path.join(PROJECT_ROOT, path)
+
 class ConvolutionNeuralNetwork:
     def __init__(self, num_epochs=30, layers=4, dropout=0.5):
         self.num_epochs = num_epochs
         self.layers = layers
         self.dropout = dropout
         self.label_encoder = LabelEncoder()
-        self.label_path = os.path.join(constants.TRAINED_MODELS_PATH, 'sample_cnn_label_encoder.pkl')
-        self.model_path = os.path.join(constants.TRAINED_MODELS_PATH, 'sample_cnn.keras')
+        self.label_path = _abs(os.path.join(constants.TRAINED_MODELS_PATH, 'sample_cnn_label_encoder.pkl'))
+        self.model_path = _abs(os.path.join(constants.TRAINED_MODELS_PATH, 'sample_cnn.keras'))
         self.history = None
         self.model = None
         

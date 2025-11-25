@@ -1,7 +1,16 @@
-import os
+import os, sys
 import tempfile
+from pathlib import Path
 from flask import Flask, request, jsonify
 from lib.aws_storage import aws_s3 as s3
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = PROJECT_ROOT / "src"
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(SRC_DIR))
+
+from src.generate_final_image import generate_final_image
+import src.utils.constants as constants
 
 app = Flask(__name__)
 
@@ -79,6 +88,28 @@ def download_from_s3_api():
 @app.get("/get-today-date")
 def get_today_date_api():
     return {"date": s3.get_today_date()}
+
+@app.post("/generate-ai-predictions")
+def generate_ai_predictions():
+    raw_files = os.listdir(constants.TEMP_FOLDER_RAW_PATH)
+    if not raw_files:
+        return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
+    
+    raw_image = os.path.join(constants.TEMP_FOLDER_RAW_PATH, raw_files[0])
+    if not raw_image:
+        return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
+    
+    label = generate_final_image(raw_image)
+    if not label:
+        return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
+    
+    annotated_files = os.listdir(constants.TEMP_FOLDER_ANNOTATED_PATH)
+    if not annotated_files:
+        return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
+    
+    annotated_image_path = os.path.join(constants.TEMP_FOLDER_ANNOTATED_PATH, annotated_files[0])
+    
+    return jsonify({"status": "ok", "label": label, "annotated_image_path": annotated_image_path}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

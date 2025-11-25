@@ -112,6 +112,13 @@ class _HomeState extends State<Home> {
           pickedFile: file,
           userId: "$CURRENT_USER",
         );
+        await S3ApiService.generateAIPredictions();
+        // final result = await S3ApiService.generateAIPredictions();
+
+        // if (result != null) {
+        //   final label = result['label'] as String;
+        //   final annotatedPath = result['annotated_image_path'] as String;
+        // }
       });
     }
 
