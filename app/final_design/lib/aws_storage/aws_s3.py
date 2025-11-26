@@ -31,18 +31,21 @@ def create_user_folder(user_id):
     _create_folder_helper(user_id)
 
 def create_today_folder(user_id):
-    _create_folder_helper(user_id + '/' + _get_today_date() + '/images/')
-    _create_folder_helper(user_id + '/' + _get_today_date() + '/diagnosis/')
+    _create_folder_helper(user_id + '/' + get_today_date() + '/images/')
+    _create_folder_helper(user_id + '/' + get_today_date() + '/diagnosis/')
+    _create_folder_helper(user_id + '/' + get_today_date() + '/annotated_images/')
 
-def add_file(file_name, file_path, user_id, bucket=constants.BUCKET):
-    if not folder_exists(user_id + '/' + _get_today_date()):
+def add_file(file_name, file_path, user_id, isAnnotated, bucket=constants.BUCKET):
+    if not folder_exists(user_id + '/' + get_today_date()):
         create_today_folder(user_id)
 
     destination_path = ''
     if file_name.endswith('.txt'):
-        destination_path = user_id + '/' + _get_today_date() + '/diagnosis/' + file_name
-    else: 
-        destination_path = user_id + '/' + _get_today_date() + '/images/' + file_name
+        destination_path = user_id + '/' + get_today_date() + '/diagnosis/' + file_name
+    elif isAnnotated == "false": 
+        destination_path = user_id + '/' + get_today_date() + '/images/' + file_name
+    else:
+        destination_path = user_id + '/' + get_today_date() + '/annotated_images/' + file_name
 
     try:
         s3_client.upload_file(
@@ -64,6 +67,26 @@ def get_file_url(file_path, expire_time=3600, bucket=constants.BUCKET):
     except Exception as e:
         print(f"Error creating file url of '{file_path}': {e}")
 
+def download_file(file_name, file_path, bucket=constants.BUCKET):
+    local_dir_raw = "temp_folder/raw_image"
+    os.makedirs(local_dir_raw, exist_ok=True)
+
+    local_dir_annotated = "temp_folder/annotated_image"
+    os.makedirs(local_dir_annotated, exist_ok=True)
+
+    local_path_raw = os.path.join(local_dir_raw, file_name)
+
+    print(f"[download_file] Bucket={bucket}, S3 key={file_path}")
+    print(f"[download_file] Local path={os.path.abspath(local_path_raw)}")
+
+    try:        
+        s3_client.download_file(bucket, file_path, local_path_raw)
+        print(f"Successfully added file '{file_name}' in '{local_path_raw}'")
+        return local_path_raw
+    except Exception as e:
+        print(f"Error adding file '{file_name}' in '{local_path_raw}': {e}")
+        return None
+
 def _create_folder_helper(folder_path, bucket=constants.BUCKET):
     if not folder_path.endswith('/'):
         folder_path += '/'
@@ -74,7 +97,7 @@ def _create_folder_helper(folder_path, bucket=constants.BUCKET):
     except Exception as e:
         print(f"Error creating folder '{folder_path}': {e}")
 
-def _get_today_date():
+def get_today_date():
     today = date.today()
     formatted = today.strftime("%B%d%Y").lower()
     

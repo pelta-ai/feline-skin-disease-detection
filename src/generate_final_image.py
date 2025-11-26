@@ -10,30 +10,44 @@ import utils.constants as constants
 from src.convolutional_neural_network import ConvolutionNeuralNetwork as cnn
 
 
-def generate_final_image(image_path, cnn_model_path=constants.CNN_MODEL_PATH, yolo_model_path=constants.YOLO_MODEL_PATH, output_dir=None):
-    model = YOLO(yolo_model_path)
-    if not os.path.exists(cnn_model_path):
-        raise FileNotFoundError(f'CNN model file not found: {cnn_model_path}')
-    if not cnn_model_path.endswith('.keras'):
-        raise ValueError(f'CNN model file must be a .keras file (full model). Got: {cnn_model_path}')
+def generate_final_image(image_path, output_dir=constants.TEMP_FOLDER_ANNOTATED_PATH, cnn_model_path=constants.CNN_MODEL_PATH, yolo_model_path=constants.YOLO_MODEL_PATH):
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    def _abs(path):
+        return path if os.path.isabs(path) else os.path.join(project_root, path)
+
+    yolo_model_full = _abs(yolo_model_path)
+    cnn_model_full = _abs(cnn_model_path)
+    output_dir_full = _abs(output_dir)
+
+    if not os.path.exists(yolo_model_full):
+        raise FileNotFoundError(f"YOLO model file not found: {yolo_model_full}")
+
+    if not os.path.exists(cnn_model_full):
+        raise FileNotFoundError(f"CNN model file not found: {cnn_model_full}")
+
+    if not cnn_model_full.endswith(".keras"):
+        raise ValueError("CNN model must be a .keras model")
+
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"Input image not found: {image_path}")
+
+
+    model = YOLO(yolo_model_full)
     cnn_model = cnn()
-    try:
-        cnn_model.load_model(model_path=cnn_model_path)
-    except Exception as e:
-        raise RuntimeError(f'Failed to load full Keras model from {cnn_model_path}. Make sure it was saved with model.save(...). Error: {e}')
-
-
+    cnn_model.load_model(model_path=cnn_model_full)
+    
     # validate input image
     if not os.path.exists(image_path):
         raise FileNotFoundError(f'Input image not found: {image_path}')
-    image = cv2.imread(image_path)
+    image = cv2.imread(str(image_path))
     if image is None:
         raise RuntimeError(f'cv2 failed to load image: {image_path}')
     
     img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     results = model(image_path)
-    if not results or results[0].boxes is None or results[0].boxes.xyxy is None:
+    if len(results) == 0 or results[0].boxes is None or len(results[0].boxes) == 0:
         boxes = np.array([])
     else:
         boxes = results[0].boxes.xyxy.cpu().numpy()
@@ -49,32 +63,39 @@ def generate_final_image(image_path, cnn_model_path=constants.CNN_MODEL_PATH, yo
             if cropped.size == 0:
                 continue
 
-
             img_pil = Image.fromarray(cropped).resize((224, 224)).convert('RGB')
             arr = np.array(img_pil)
+
             label = predict_from_image_array(arr, cnn_model)
             labels.append(label)
 
 
             if label in constants.DISEASE_COLORS:
-                cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 2)
-            else:
-                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 0), 2)
+                cv2.rectangle(image, (x1, y1), (x2, y2), constants.DISEASE_COLORS[label], 10)
     else:
         labels.append("healthy")
 
+    if not labels:
+        labels.append("healthy")
 
-    # after drawing boxes, compute output_path in absolute output_dir
     base_name = os.path.basename(image_path)
     base_name_without_extension = os.path.splitext(base_name)[0]
-    output_path = constants.TEST_RESULTS_PATH + '\\' + base_name_without_extension + '.jpg'
-    cv2.imwrite(output_path, image)
-    print(f'Saved: {output_path}')
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, base_name_without_extension + ".jpg")
 
+    cv2.imwrite(output_path, image)
+    print(f"Saved annotated image to: {output_path}")
+
+    if labels:
+        main_label = max(set(labels), key=labels.count)
+    else:
+        main_label = "healthy"
+
+    print(main_label)
 
     return {
-        'label': labels[0] if labels else None,
-        'output_path': output_path,
+        "label": main_label,
+        "output_path": output_path,
     }
 
 
@@ -83,5 +104,4 @@ def predict_from_image_array(arr, model):
     label = model.predict_label(arr)
     return label
 
-
-generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_1.jpg')
+# generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_1.jpg')

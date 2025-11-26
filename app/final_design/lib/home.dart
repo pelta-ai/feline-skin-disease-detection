@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:final_design/utils/aws_s3_api.dart';
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/constants.dart';
@@ -99,19 +101,52 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   XFile? _imageFile;
+  String? _predictedLabel;
+  String? _annotatedImageUrl;
 
   Future<void> _pickImageFromCamera() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = pickedFile;
-        File file = File(_imageFile!.path);
-        S3ApiService.uploadFile(file, "$CURRENT_USER");
-      });
+    if (pickedFile == null) return;
+
+    final file = File(pickedFile.path);
+    final fileName = pickedFile.name; // or: path.split('/').last
+    final userId = CURRENT_USER!; // or handle null safely
+
+    setState(() {
+      _imageFile = pickedFile;
+      _predictedLabel = null;
+      _annotatedImageUrl = null;
+    });
+
+    // 1. Upload image
+    await S3ApiService.uploadFile(file, userId, false);
+
+    // 2. Get today's folder name from backend
+    final today = await S3ApiService.getTodayDateFromBackend();
+    if (today == null) {
+      log("Could not get date from backend");
+      return;
     }
 
-    Navigator.pushNamed(context, '/recent_diagnosis');
+    final s3Key = "$userId/$today/images/$fileName";
+
+    // 3. Generate predictions (this will download from S3 + run YOLO+CNN)
+    final result = await S3ApiService.generateAIPredictions(
+      userId: userId,
+      fileName: fileName,
+      s3Key: s3Key,
+    );
+
+    if (!mounted || result == null) return;
+
+    final label = result['label'] as String?;
+    final annotatedUrl = result['annotated_url'] as String?;
+
+    setState(() {
+      _predictedLabel = label;
+      _annotatedImageUrl = annotatedUrl;
+    });
   }
 
   @override
@@ -175,16 +210,16 @@ class _HomeState extends State<Home> {
                   ],
                 ),
               )),
-          if (_imageFile != null)
+          if (_annotatedImageUrl != null)
             Padding(
               padding: const EdgeInsets.only(top: 20),
-              child: Image.file(
-                File(_imageFile!.path),
+              child: Image.network(
+                _annotatedImageUrl!,
                 width: 200,
                 height: 200,
                 fit: BoxFit.cover,
               ),
-            ),
+            )
         ],
       ),
     ));

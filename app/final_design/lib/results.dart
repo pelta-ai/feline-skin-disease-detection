@@ -70,7 +70,7 @@ class RecentDiagnosis extends StatelessWidget {
         // If folder exists, fetch object paths
         return FutureBuilder<List<String>>(
           future: S3ApiService.listObjectPaths(
-              prefix: "$CURRENT_USER/$TODAY_DATE/images/"),
+              prefix: "$CURRENT_USER/$TODAY_DATE/annotated_images/"),
           builder: (context, listSnapshot) {
             if (listSnapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());

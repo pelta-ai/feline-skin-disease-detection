@@ -1,7 +1,17 @@
-import os
+import os, sys
 import tempfile
+import shutil
+from pathlib import Path
 from flask import Flask, request, jsonify
 from lib.aws_storage import aws_s3 as s3
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = PROJECT_ROOT / "src"
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(SRC_DIR))
+
+from src.generate_final_image import generate_final_image
+import src.utils.constants as constants
 
 app = Flask(__name__)
 
@@ -34,16 +44,17 @@ def upload_file():
     try:
         user_id = request.form.get('user_id')
         file = request.files.get('file')
+        isAnnotated = request.form.get('is_annotated')
 
-        if not user_id or not file:
-            return jsonify({'error': 'user_id and file are required'}), 400
+        if not user_id or not file or not isAnnotated:
+            return jsonify({'error': 'user_id, is_annotated, and file are required'}), 400
 
         # Use a valid temp directory
         temp_dir = tempfile.gettempdir()
         temp_path = os.path.join(temp_dir, file.filename)
         file.save(temp_path)
 
-        s3.add_file(file.filename, temp_path, user_id)
+        s3.add_file(file.filename, temp_path, user_id, isAnnotated)
 
         return jsonify({'status': 'uploaded', 'file': file.filename}), 200
     except Exception as e:
@@ -62,6 +73,78 @@ def get_file_url():
     except Exception as e:
         print(f"Error generating URL: {e}")
         return jsonify({'error': str(e)}), 500
+    
+@app.post("/download-file")
+def download_from_s3_api():
+    #user_id = request.form["user_id"]    
+    file_name = request.form["file_name"]
+    s3_key = request.form["s3_key"]      
+
+    local_path = s3.download_file(file_name, s3_key)
+
+    if not local_path:
+        return jsonify({"status": "error", "message": "download_failed"}), 500
+
+    return jsonify({"status": "ok", "local_path": local_path}), 200
+
+@app.get("/get-today-date")
+def get_today_date_api():
+    return {"date": s3.get_today_date()}
+
+@app.post("/generate-ai-predictions")
+def generate_ai_predictions():
+    try:
+        data = request.get_json(silent=True) or request.form
+
+        user_id  = data.get("user_id")
+        file_name = data.get("file_name")
+        s3_key   = data.get("s3_key")
+
+        if not (user_id and file_name and s3_key):
+            return jsonify({"status": "error", "message": "user_id_file_name_s3_key_required"}), 400
+
+        # 1) Download from S3 into temp_folder/raw_image
+        local_path = s3.download_file(file_name, s3_key)
+        if not local_path:
+            return jsonify({"status": "error", "message": "download_failed"}), 500
+
+        # 2) Run YOLO + CNN on the downloaded image
+        result = generate_final_image(local_path)
+        if not result or "output_path" not in result:
+            return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
+
+        label = result["label"]
+        annotated_image_path = result["output_path"]
+
+        # 3) Upload annotated image back to S3
+        if not os.path.exists(annotated_image_path):
+            return jsonify({"status": "error", "message": "annotated_image_missing"}), 500
+
+        annotated_file_name = os.path.basename(annotated_image_path)
+        s3.add_file(annotated_file_name, annotated_image_path, user_id, "true")
+
+        try:
+            shutil.rmtree(constants.TEMP_FOLDER_PATH)
+            print(f"Folder '{constants.TEMP_FOLDER_PATH}' deleted successfully.")
+        except OSError as e:
+            print(f"Error deleting folder: {e}")
+
+        today = s3.get_today_date()
+        annotated_s3_key = f"{user_id}/{today}/annotated_images/{annotated_file_name}"
+        url = s3.get_file_url(annotated_s3_key)
+
+        return jsonify({
+            "status": "ok",
+            "label": label,
+            "annotated_image_path": annotated_image_path,
+            "annotated_s3_key": annotated_s3_key,
+            "annotated_url": url,
+        }), 200
+
+    except Exception as e:
+        print(f"Error in /generate-ai-predictions: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
