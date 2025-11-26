@@ -1,5 +1,6 @@
 import os, sys
 import tempfile
+import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify
 from lib.aws_storage import aws_s3 as s3
@@ -121,6 +122,12 @@ def generate_ai_predictions():
 
         annotated_file_name = os.path.basename(annotated_image_path)
         s3.add_file(annotated_file_name, annotated_image_path, user_id, "true")
+
+        try:
+            shutil.rmtree(constants.TEMP_FOLDER_PATH)
+            print(f"Folder '{constants.TEMP_FOLDER_PATH}' deleted successfully.")
+        except OSError as e:
+            print(f"Error deleting folder: {e}")
 
         today = s3.get_today_date()
         annotated_s3_key = f"{user_id}/{today}/annotated_images/{annotated_file_name}"
