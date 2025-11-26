@@ -35,14 +35,14 @@ def create_today_folder(user_id):
     _create_folder_helper(user_id + '/' + get_today_date() + '/diagnosis/')
     _create_folder_helper(user_id + '/' + get_today_date() + '/annotated_images/')
 
-def add_file(file_name, file_path, user_id, bucket=constants.BUCKET, isAnnotated=False):
+def add_file(file_name, file_path, user_id, isAnnotated, bucket=constants.BUCKET):
     if not folder_exists(user_id + '/' + get_today_date()):
         create_today_folder(user_id)
 
     destination_path = ''
     if file_name.endswith('.txt'):
         destination_path = user_id + '/' + get_today_date() + '/diagnosis/' + file_name
-    elif not isAnnotated: 
+    elif isAnnotated == "false": 
         destination_path = user_id + '/' + get_today_date() + '/images/' + file_name
     else:
         destination_path = user_id + '/' + get_today_date() + '/annotated_images/' + file_name

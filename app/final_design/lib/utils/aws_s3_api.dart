@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 
 class S3ApiService {
   static const baseUrl =
-      "https://fc09bfd1899d.ngrok-free.app"; // replace with your deployed endpoint in production
+      "https://7db9719b36cb.ngrok-free.app"; // replace with your deployed endpoint in production
 
   // List S3 objects under a prefix
   static Future<List<String>> listObjectPaths({String prefix = ''}) async {
@@ -59,11 +59,13 @@ class S3ApiService {
   }
 
   // Upload a file
-  static Future<void> uploadFile(File file, String userId) async {
+  static Future<void> uploadFile(
+      File file, String userId, bool isAnnotated) async {
     try {
       var uri = Uri.parse('$baseUrl/add-file');
       var request = http.MultipartRequest('POST', uri)
         ..fields['user_id'] = userId
+        ..fields['is_annotated'] = isAnnotated.toString()
         ..files.add(await http.MultipartFile.fromPath('file', file.path));
       var response = await request.send();
       if (response.statusCode == 200) {
@@ -137,25 +139,25 @@ class S3ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> generateAIPredictions() async {
-    try {
-      final uri = Uri.parse('$baseUrl/generate-ai-predictions');
-      final response = await http.post(uri);
+  static Future<Map<String, dynamic>?> generateAIPredictions({
+    required String userId,
+    required String fileName,
+    required String s3Key,
+  }) async {
+    final uri = Uri.parse("$baseUrl/generate-ai-predictions");
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'ok') {
-          return data; // contains "label" and "annotated_image_path"
-        } else {
-          log('AI prediction failed: ${data['message']}');
-          return null;
-        }
-      } else {
-        log('generate-ai-predictions HTTP error: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      log('Error calling generate-ai-predictions: $e');
+    final request = http.MultipartRequest('POST', uri)
+      ..fields['user_id'] = userId
+      ..fields['file_name'] = fileName
+      ..fields['s3_key'] = s3Key;
+
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      return jsonDecode(body) as Map<String, dynamic>;
+    } else {
+      log("Error generating AI predictions: $body");
       return null;
     }
   }
