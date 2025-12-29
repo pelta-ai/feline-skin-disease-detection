@@ -3,7 +3,7 @@ import 'package:final_design/utils/constants.dart';
 
 Drawer createDrawer(BuildContext context, String currentScreen) {
   return Drawer(
-    backgroundColor: COLOR_MAIN,
+    backgroundColor: colorMain,
     child: ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -19,7 +19,7 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
           padding: const EdgeInsets.only(top: 20),
         ),
         ListTile(
-            leading: Icon(Icons.home, color: COLOR_WHITE, size: 24.0),
+            leading: Icon(Icons.home, color: colorWhite, size: 24.0),
             title: Text(
               "Home",
               style: textThemeWhite.titleSmall,
@@ -32,7 +32,7 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
               }
             }),
         ListTile(
-            leading: Icon(Icons.bolt, color: COLOR_WHITE, size: 24.0),
+            leading: Icon(Icons.bolt, color: colorWhite, size: 24.0),
             title: Text(
               "Streak",
               style: textThemeWhite.titleSmall,
@@ -45,7 +45,7 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
               }
             }),
         ListTile(
-            leading: Icon(Icons.newspaper, color: COLOR_WHITE, size: 24.0),
+            leading: Icon(Icons.newspaper, color: colorWhite, size: 24.0),
             title: Text(
               "Recent Diagnosis",
               style: textThemeWhite.titleSmall,
@@ -59,12 +59,20 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
               }
             }),
         ListTile(
-            leading: Icon(Icons.settings, color: COLOR_WHITE, size: 24.0),
+            leading: Icon(Icons.settings, color: colorWhite, size: 24.0),
             title: Text(
               "Settings",
               style: textThemeWhite.titleSmall,
             ),
-            onTap: () {}),
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer first
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Settings coming soon!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }),
       ],
     ),
   );

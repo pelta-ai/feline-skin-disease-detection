@@ -1,7 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
 # Miscellaneous
 *.class
 *.log
-*.pyc
 *.swp
 .DS_Store
 .atom/
@@ -12,16 +16,17 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IDE
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Claude Code local settings
+.claude/
+
+# Windows artifacts
+nul
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -31,7 +36,7 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
 
 # Symbolication related
 app.*.symbols
@@ -39,7 +44,12 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android Studio build artifacts
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# Environment files
+.env
+.env.*
+!.env.example

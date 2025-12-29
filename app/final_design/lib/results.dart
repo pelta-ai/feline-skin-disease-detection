@@ -12,9 +12,9 @@ class RecentDiagnosisScreen extends StatelessWidget {
         appBar: PreferredSize(
             preferredSize: Size.fromHeight(getScreenHeight(context) * 0.20),
             child: AppBar(
-              backgroundColor: COLOR_MAIN,
+              backgroundColor: colorMain,
               automaticallyImplyLeading: true,
-              iconTheme: IconThemeData(color: COLOR_WHITE),
+              iconTheme: IconThemeData(color: colorWhite),
               flexibleSpace: Stack(
                 children: [
                   Column(
@@ -57,7 +57,7 @@ class RecentDiagnosis extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: S3ApiService.folderExists("$CURRENT_USER/$TODAY_DATE/"),
+      future: S3ApiService.folderExists("$currentUser/$todayDate/"),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -70,7 +70,7 @@ class RecentDiagnosis extends StatelessWidget {
         // If folder exists, fetch object paths
         return FutureBuilder<List<String>>(
           future: S3ApiService.listObjectPaths(
-              prefix: "$CURRENT_USER/$TODAY_DATE/annotated_images/"),
+              prefix: "$currentUser/$todayDate/annotated_images/"),
           builder: (context, listSnapshot) {
             if (listSnapshot.connectionState == ConnectionState.waiting) {
               return Center(child: CircularProgressIndicator());
@@ -91,7 +91,7 @@ class RecentDiagnosis extends StatelessWidget {
                       width: double.infinity,
                       height: 300,
                       padding: EdgeInsets.all(20),
-                      color: COLOR_MAIN,
+                      color: colorMain,
                       child: Column(
                         children: [
                           Text(
