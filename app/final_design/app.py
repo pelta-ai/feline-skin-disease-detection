@@ -1,9 +1,26 @@
 import os, sys
+import uuid
+import logging
+import json
 import tempfile
 import shutil
 from pathlib import Path
-from flask import Flask, request, jsonify
-from lib.aws_storage import aws_s3 as s3
+from flask import Flask, request, jsonify, g
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (for local development)
+load_dotenv()
+
+# OpenTelemetry imports (basic tracing - OTLP export can be added later)
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
+# Add lib directory to path for imports
+APP_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(APP_DIR))
+
+from lib.storage import get_storage_provider, StorageProvider
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -15,28 +32,86 @@ import src.utils.constants as constants
 
 app = Flask(__name__)
 
+# ============================================
+# OpenTelemetry Setup (basic tracing)
+# ============================================
+# TODO: Add OTLP exporter for production (Grafana Cloud, etc.)
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+
+# Auto-instrument Flask (tracks request timing automatically)
+FlaskInstrumentor().instrument_app(app)
+
+# ============================================
+# Structured Logging Setup
+# ============================================
+class JSONFormatter(logging.Formatter):
+    """Custom formatter that outputs JSON logs with request_id"""
+    def format(self, record):
+        log_obj = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "request_id": getattr(g, 'request_id', 'N/A') if hasattr(g, 'request_id') else 'N/A',
+            "message": record.getMessage(),
+            "logger": record.name,
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+# Configure app logger
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+app.logger.handlers = [handler]
+app.logger.setLevel(logging.INFO)
+
+# ============================================
+# Request ID Middleware
+# ============================================
+@app.before_request
+def add_request_id():
+    """Extract or generate request ID for correlation"""
+    g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4()))
+    # Add to current span as attribute
+    current_span = trace.get_current_span()
+    if current_span:
+        current_span.set_attribute("request.id", g.request_id)
+
+@app.after_request
+def log_request(response):
+    """Log every request with request ID and add to response headers"""
+    response.headers['X-Request-ID'] = g.request_id
+    app.logger.info(f"{request.method} {request.path} → {response.status_code}")
+    return response
+
+# ============================================
+# Storage Provider
+# ============================================
+# Initialize storage provider (can be overridden via STORAGE_PROVIDER env var for testing)
+storage: StorageProvider = get_storage_provider()
+
 @app.route('/list-objects', methods=['GET'])
 def list_objects():
-    prefix = request.args.get('prefix')
-    object_paths = s3.list_object_paths(prefix=prefix)
+    prefix = request.args.get('prefix') or ""
+    object_paths = storage.list_objects(prefix=prefix)
     return jsonify(object_paths)
 
 @app.route('/folder-exists', methods=['GET'])
 def check_folder_exists():
     path = request.args.get('path')
-    exists = s3.folder_exists(path)
+    exists = storage.folder_exists(path)
     return jsonify({'exists': exists})
 
 @app.route('/create-user-folder', methods=['POST'])
 def create_user_folder():
     user_id = request.json.get('user_id')
-    s3.create_user_folder(user_id)
+    storage.create_user_folder(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/create-today-folder', methods=['POST'])
 def create_today_folder():
     user_id = request.json.get('user_id')
-    s3.create_today_folder(user_id)
+    storage.create_today_folders(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/add-file', methods=['POST'])
@@ -44,9 +119,9 @@ def upload_file():
     try:
         user_id = request.form.get('user_id')
         file = request.files.get('file')
-        isAnnotated = request.form.get('is_annotated')
+        is_annotated_str = request.form.get('is_annotated')
 
-        if not user_id or not file or not isAnnotated:
+        if not user_id or not file or not is_annotated_str:
             return jsonify({'error': 'user_id, is_annotated, and file are required'}), 400
 
         # Use a valid temp directory
@@ -54,11 +129,13 @@ def upload_file():
         temp_path = os.path.join(temp_dir, file.filename)
         file.save(temp_path)
 
-        s3.add_file(file.filename, temp_path, user_id, isAnnotated)
+        # Convert string to boolean for the storage provider
+        is_annotated = is_annotated_str.lower() == "true"
+        storage.add_file(file.filename, temp_path, user_id, is_annotated)
 
         return jsonify({'status': 'uploaded', 'file': file.filename}), 200
     except Exception as e:
-        print(f"Error uploading file: {e}")
+        app.logger.error(f"Error uploading file: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get-file-url', methods=['GET'])
@@ -67,71 +144,80 @@ def get_file_url():
         path = request.args.get('path')
         if not path:
             return jsonify({'error': 'Path is required'}), 400
-        
-        url = s3.get_file_url(path)
+
+        url = storage.get_file_url(path)
         return jsonify({'url': url})
     except Exception as e:
-        print(f"Error generating URL: {e}")
+        app.logger.error(f"Error generating URL: {e}")
         return jsonify({'error': str(e)}), 500
     
 @app.post("/download-file")
 def download_from_s3_api():
-    #user_id = request.form["user_id"]    
     file_name = request.form["file_name"]
-    s3_key = request.form["s3_key"]      
+    s3_key = request.form["s3_key"]
 
-    local_path = s3.download_file(file_name, s3_key)
+    # Create temp directory for downloaded files
+    local_dir = "temp_folder/raw_image"
+    os.makedirs(local_dir, exist_ok=True)
+    local_path = os.path.join(local_dir, file_name)
 
-    if not local_path:
+    result = storage.download_file(s3_key, local_path)
+
+    if not result:
         return jsonify({"status": "error", "message": "download_failed"}), 500
 
-    return jsonify({"status": "ok", "local_path": local_path}), 200
+    return jsonify({"status": "ok", "local_path": result}), 200
 
 @app.get("/get-today-date")
 def get_today_date_api():
-    return {"date": s3.get_today_date()}
+    return {"date": StorageProvider.get_today_date()}
 
 @app.post("/generate-ai-predictions")
 def generate_ai_predictions():
     try:
         data = request.get_json(silent=True) or request.form
 
-        user_id  = data.get("user_id")
+        user_id = data.get("user_id")
         file_name = data.get("file_name")
-        s3_key   = data.get("s3_key")
+        s3_key = data.get("s3_key")
 
         if not (user_id and file_name and s3_key):
             return jsonify({"status": "error", "message": "user_id_file_name_s3_key_required"}), 400
 
-        # 1) Download from S3 into temp_folder/raw_image
-        local_path = s3.download_file(file_name, s3_key)
-        if not local_path:
+        # 1) Download from storage into temp_folder/raw_image
+        local_dir = "temp_folder/raw_image"
+        os.makedirs(local_dir, exist_ok=True)
+        local_path = os.path.join(local_dir, file_name)
+
+        result_path = storage.download_file(s3_key, local_path)
+        if not result_path:
             return jsonify({"status": "error", "message": "download_failed"}), 500
 
         # 2) Run YOLO + CNN on the downloaded image
-        result = generate_final_image(local_path)
+        result = generate_final_image(result_path)
         if not result or "output_path" not in result:
             return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
 
         label = result["label"]
         annotated_image_path = result["output_path"]
 
-        # 3) Upload annotated image back to S3
+        # 3) Upload annotated image back to storage
         if not os.path.exists(annotated_image_path):
             return jsonify({"status": "error", "message": "annotated_image_missing"}), 500
 
         annotated_file_name = os.path.basename(annotated_image_path)
-        s3.add_file(annotated_file_name, annotated_image_path, user_id, "true")
+        storage.add_file(annotated_file_name, annotated_image_path, user_id, is_annotated=True)
 
+        # Clean up temp folder
         try:
             shutil.rmtree(constants.TEMP_FOLDER_PATH)
-            print(f"Folder '{constants.TEMP_FOLDER_PATH}' deleted successfully.")
+            app.logger.info(f"Temp folder cleaned up")
         except OSError as e:
-            print(f"Error deleting folder: {e}")
+            app.logger.warning(f"Error deleting temp folder: {e}")
 
-        today = s3.get_today_date()
+        today = StorageProvider.get_today_date()
         annotated_s3_key = f"{user_id}/{today}/annotated_images/{annotated_file_name}"
-        url = s3.get_file_url(annotated_s3_key)
+        url = storage.get_file_url(annotated_s3_key)
 
         return jsonify({
             "status": "ok",
@@ -142,9 +228,15 @@ def generate_ai_predictions():
         }), 200
 
     except Exception as e:
-        print(f"Error in /generate-ai-predictions: {e}")
+        app.logger.error(f"Error in AI predictions: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Configuration via environment variables (secure for production)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')  # 0.0.0.0 for containers
+    port = int(os.environ.get('FLASK_PORT', '5000'))
+
+    app.logger.info(f"Starting server on {host}:{port} (debug={debug_mode})")
+    app.run(host=host, port=port, debug=debug_mode)

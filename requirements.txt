@@ -1,0 +1,39 @@
+# Feline Skin Disease Detection - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Web Framework
+flask>=2.3.0
+
+# AWS SDK
+boto3>=1.26.0
+botocore>=1.29.0
+
+# Machine Learning - YOLO
+ultralytics>=8.0.0
+
+# Machine Learning - CNN
+tensorflow>=2.12.0
+keras>=2.12.0
+scikit-learn>=1.2.0
+joblib>=1.2.0
+
+# Image Processing
+opencv-python>=4.7.0
+Pillow>=9.4.0
+numpy>=1.23.0
+
+# Visualization (optional - for training/testing)
+matplotlib>=3.7.0
+
+# Testing
+pytest>=7.3.0
+moto>=4.1.0  # AWS mocking
+
+# Observability - OpenTelemetry (basic tracing)
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation-flask>=0.41b0
+# opentelemetry-exporter-otlp>=1.20.0  # TODO: Uncomment for production (Grafana Cloud, etc.)
+
+# Development
+python-dotenv>=1.0.0  # For .env file support

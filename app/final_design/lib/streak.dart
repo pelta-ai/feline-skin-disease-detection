@@ -16,9 +16,9 @@ class StreakScreen extends StatelessWidget {
         appBar: PreferredSize(
             preferredSize: Size.fromHeight(getScreenHeight(context) * 0.184),
             child: AppBar(
-              backgroundColor: COLOR_MAIN,
+              backgroundColor: colorMain,
               automaticallyImplyLeading: true,
-              iconTheme: IconThemeData(color: COLOR_WHITE),
+              iconTheme: IconThemeData(color: colorWhite),
               flexibleSpace: Stack(
                 children: [
                   Column(
@@ -36,7 +36,7 @@ class StreakScreen extends StatelessWidget {
                       )),
                       Center(
                           child: Text(
-                        "[Current Streak]",
+                        "${StreakData().getCurrentStreak()} days",
                         style: textThemeWhite.displaySmall,
                       ))
                     ],
@@ -54,13 +54,13 @@ class StreakScreen extends StatelessWidget {
 }
 
 class Streak extends StatelessWidget {
-  DateTime today = DateTime.now();
+  final DateTime today = DateTime.now();
   final StreakData streakData = StreakData();
 
   Streak({super.key});
 
   Future<void> updateStreak() async {
-    if (await S3ApiService.folderExists("$CURRENT_USER/$TODAY_DATE/")) {
+    if (await S3ApiService.folderExists("$currentUser/$todayDate/")) {
       streakData.setStatus(DateTime.now(), "done");
       log("Done");
     }
@@ -104,14 +104,15 @@ class Streak extends StatelessWidget {
                       '${day.day}',
                       style: TextStyle(
                         color: bgColor == Colors.transparent
-                            ? COLOR_BLACK
-                            : COLOR_WHITE,
+                            ? colorBlack
+                            : colorWhite,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 );
               }
+              return null; // Use default rendering for non-streak days
             }),
           )
         ],

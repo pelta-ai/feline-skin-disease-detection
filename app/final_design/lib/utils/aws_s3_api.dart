@@ -2,19 +2,39 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
+import 'package:final_design/utils/app_config.dart';
+import 'package:final_design/utils/request_id.dart';
+
+/// Default headers for all API requests
+Map<String, String> _defaultHeaders() => {
+      'X-Request-ID': RequestId.generate(),
+    };
+
+/// Extension for fluent header building on Map
+extension HeadersExtension on Map<String, String> {
+  Map<String, String> withJson() => {...this, 'Content-Type': 'application/json'};
+}
+
+/// Extension for adding headers to MultipartRequest
+extension MultipartRequestExtension on http.MultipartRequest {
+  http.MultipartRequest withDefaultHeaders() {
+    headers.addAll(_defaultHeaders());
+    return this;
+  }
+}
 
 class S3ApiService {
-  static const baseUrl =
-      "https://7db9719b36cb.ngrok-free.app"; // replace with your deployed endpoint in production
+  /// Backend URL configured via AppConfig
+  static String get baseUrl => AppConfig.backendUrl;
 
   // List S3 objects under a prefix
   static Future<List<String>> listObjectPaths({String prefix = ''}) async {
     final uri = Uri.parse('$baseUrl/list-objects?prefix=$prefix');
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: _defaultHeaders());
 
     if (response.statusCode == 200) {
       List<dynamic> data = json.decode(response.body);
-      return data.map((e) => e.toString()).toList(); // Convert each to String
+      return data.map((e) => e.toString()).toList();
     } else {
       throw Exception('Failed to load keys');
     }
@@ -22,8 +42,10 @@ class S3ApiService {
 
   // Check if a folder exists
   static Future<bool> folderExists(String path) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/folder-exists?path=$path'));
+    final response = await http.get(
+      Uri.parse('$baseUrl/folder-exists?path=$path'),
+      headers: _defaultHeaders(),
+    );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body)['exists'];
@@ -36,7 +58,7 @@ class S3ApiService {
   static Future<void> createUserFolder(String userId) async {
     final response = await http.post(
       Uri.parse('$baseUrl/create-user-folder'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _defaultHeaders().withJson(),
       body: jsonEncode({'user_id': userId}),
     );
 
@@ -49,7 +71,7 @@ class S3ApiService {
   static Future<void> createTodayFolder(String userId) async {
     final response = await http.post(
       Uri.parse('$baseUrl/create-today-folder'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _defaultHeaders().withJson(),
       body: jsonEncode({'user_id': userId}),
     );
 
@@ -62,12 +84,14 @@ class S3ApiService {
   static Future<void> uploadFile(
       File file, String userId, bool isAnnotated) async {
     try {
-      var uri = Uri.parse('$baseUrl/add-file');
-      var request = http.MultipartRequest('POST', uri)
+      final uri = Uri.parse('$baseUrl/add-file');
+      final request = http.MultipartRequest('POST', uri)
         ..fields['user_id'] = userId
         ..fields['is_annotated'] = isAnnotated.toString()
         ..files.add(await http.MultipartFile.fromPath('file', file.path));
-      var response = await request.send();
+
+      final response = await request.withDefaultHeaders().send();
+
       if (response.statusCode == 200) {
         log('Upload successful');
       } else {
@@ -81,7 +105,8 @@ class S3ApiService {
   // Get presigned file URL
   static Future<String?> getFileUrl(String filePath) async {
     final url = Uri.parse('$baseUrl/get-file-url?path=$filePath');
-    final response = await http.get(url);
+    final response = await http.get(url, headers: _defaultHeaders());
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['url'];
@@ -93,7 +118,7 @@ class S3ApiService {
       {required File pickedFile, required String userId}) async {
     try {
       final fullPath = pickedFile.path;
-      final fileName = fullPath.split('/').last; // "IMG_1234.jpg"
+      final fileName = fullPath.split('/').last;
 
       final today = await getTodayDateFromBackend();
       if (today == null) {
@@ -103,13 +128,12 @@ class S3ApiService {
       final s3Key = '$userId/$today/images/$fileName';
 
       final uri = Uri.parse('$baseUrl/download-file');
-
       final request = http.MultipartRequest('POST', uri)
         ..fields['user_id'] = userId
         ..fields['file_name'] = fileName
         ..fields['s3_key'] = s3Key;
 
-      final response = await request.send();
+      final response = await request.withDefaultHeaders().send();
       final body = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
@@ -125,13 +149,12 @@ class S3ApiService {
   static Future<String?> getTodayDateFromBackend() async {
     try {
       final url = Uri.parse('$baseUrl/get-today-date');
-      final response = await http.get(url);
+      final response = await http.get(url, headers: _defaultHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['date'];
       }
-
       return null;
     } catch (e) {
       log("Error fetching date: $e");
@@ -145,13 +168,12 @@ class S3ApiService {
     required String s3Key,
   }) async {
     final uri = Uri.parse("$baseUrl/generate-ai-predictions");
-
     final request = http.MultipartRequest('POST', uri)
       ..fields['user_id'] = userId
       ..fields['file_name'] = fileName
       ..fields['s3_key'] = s3Key;
 
-    final response = await request.send();
+    final response = await request.withDefaultHeaders().send();
     final body = await response.stream.bytesToString();
 
     if (response.statusCode == 200) {

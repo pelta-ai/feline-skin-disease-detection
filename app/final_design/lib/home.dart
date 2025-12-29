@@ -1,12 +1,28 @@
 import 'dart:developer';
+import 'dart:io';
 
-import 'package:final_design/utils/aws_s3_api.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:final_design/utils/aws_s3_api.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/mini_calendar.dart';
 import 'package:final_design/drawer.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:final_design/auth/index.dart';
+
+/// Gets user's display name, falling back to email or "there"
+String _getDisplayName() {
+  if (!auth.isLoggedIn) return "there";
+  final displayName = auth.currentUserDisplayName;
+  if (displayName != null && displayName.isNotEmpty) {
+    return displayName;
+  }
+  final email = auth.currentUserEmail;
+  if (email != null && email.isNotEmpty) {
+    // Use part before @ for email
+    return email.split('@').first;
+  }
+  return "there";
+}
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,9 +33,9 @@ class HomeScreen extends StatelessWidget {
         appBar: PreferredSize(
             preferredSize: Size.fromHeight(getScreenHeight(context) * 0.30),
             child: AppBar(
-              backgroundColor: COLOR_MAIN,
+              backgroundColor: colorMain,
               automaticallyImplyLeading: true,
-              iconTheme: IconThemeData(color: COLOR_WHITE),
+              iconTheme: IconThemeData(color: colorWhite),
               flexibleSpace: Stack(
                 children: [
                   Column(
@@ -27,7 +43,7 @@ class HomeScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 60),
                         child: Text(
-                          "Hello [Username]!",
+                          "Hello ${_getDisplayName()}!",
                           style: textThemeWhite.displaySmall,
                         ),
                       ),
@@ -45,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                                       context, '/recent_diagnosis');
                                 },
                                 style: TextButton.styleFrom(
-                                  backgroundColor: COLOR_MAIN_TRANSPARENT,
+                                  backgroundColor: colorMainTransparent,
                                   padding: EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 20),
                                   shape: RoundedRectangleBorder(
@@ -60,9 +76,16 @@ class HomeScreen extends StatelessWidget {
                           SizedBox(width: 12),
                           Expanded(
                               child: TextButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Daily Check coming soon!'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  },
                                   style: TextButton.styleFrom(
-                                    backgroundColor: COLOR_MAIN_TRANSPARENT,
+                                    backgroundColor: colorMainTransparent,
                                     padding: EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 20),
                                     shape: RoundedRectangleBorder(
@@ -100,53 +123,79 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  XFile? _imageFile;
   String? _predictedLabel;
   String? _annotatedImageUrl;
+  bool _isLoading = false;
+
+  /// Processes the picked image: uploads to S3, runs AI predictions, and displays results
+  Future<void> _processImage(XFile pickedFile) async {
+    final file = File(pickedFile.path);
+    final fileName = pickedFile.name;
+    final userId = currentUser!;
+
+    setState(() {
+      _predictedLabel = null;
+      _annotatedImageUrl = null;
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Upload image
+      await S3ApiService.uploadFile(file, userId, false);
+
+      // 2. Get today's folder name from backend
+      final today = await S3ApiService.getTodayDateFromBackend();
+      if (today == null) {
+        log("Could not get date from backend");
+        return;
+      }
+
+      final s3Key = "$userId/$today/images/$fileName";
+
+      // 3. Generate predictions (this will download from S3 + run YOLO+CNN)
+      final result = await S3ApiService.generateAIPredictions(
+        userId: userId,
+        fileName: fileName,
+        s3Key: s3Key,
+      );
+
+      if (!mounted || result == null) return;
+
+      final label = result['label'] as String?;
+      final annotatedUrl = result['annotated_url'] as String?;
+
+      setState(() {
+        _predictedLabel = label;
+        _annotatedImageUrl = annotatedUrl;
+      });
+    } catch (e) {
+      log("Error processing image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error processing image. Please try again.")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   Future<void> _pickImageFromCamera() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
     if (pickedFile == null) return;
+    await _processImage(pickedFile);
+  }
 
-    final file = File(pickedFile.path);
-    final fileName = pickedFile.name; // or: path.split('/').last
-    final userId = CURRENT_USER!; // or handle null safely
-
-    setState(() {
-      _imageFile = pickedFile;
-      _predictedLabel = null;
-      _annotatedImageUrl = null;
-    });
-
-    // 1. Upload image
-    await S3ApiService.uploadFile(file, userId, false);
-
-    // 2. Get today's folder name from backend
-    final today = await S3ApiService.getTodayDateFromBackend();
-    if (today == null) {
-      log("Could not get date from backend");
-      return;
-    }
-
-    final s3Key = "$userId/$today/images/$fileName";
-
-    // 3. Generate predictions (this will download from S3 + run YOLO+CNN)
-    final result = await S3ApiService.generateAIPredictions(
-      userId: userId,
-      fileName: fileName,
-      s3Key: s3Key,
-    );
-
-    if (!mounted || result == null) return;
-
-    final label = result['label'] as String?;
-    final annotatedUrl = result['annotated_url'] as String?;
-
-    setState(() {
-      _predictedLabel = label;
-      _annotatedImageUrl = annotatedUrl;
-    });
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+    await _processImage(pickedFile);
   }
 
   @override
@@ -169,16 +218,16 @@ class _HomeState extends State<Home> {
               child: Container(
                 width: 333,
                 height: 333,
-                color: COLOR_MAIN_TRANSPARENT,
+                color: colorMainTransparent,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Padding(padding: const EdgeInsets.only(top: 65)),
                     Expanded(
                       child: TextButton(
-                          onPressed: () {},
+                          onPressed: _isLoading ? null : _pickImageFromGallery,
                           style: TextButton.styleFrom(
-                            backgroundColor: COLOR_MAIN,
+                            backgroundColor: _isLoading ? Colors.grey : colorMain,
                             padding: EdgeInsets.symmetric(
                                 horizontal: 60, vertical: 25),
                             shape: RoundedRectangleBorder(
@@ -193,9 +242,9 @@ class _HomeState extends State<Home> {
                     SizedBox(height: 40),
                     Expanded(
                         child: TextButton(
-                            onPressed: _pickImageFromCamera,
+                            onPressed: _isLoading ? null : _pickImageFromCamera,
                             style: TextButton.styleFrom(
-                              backgroundColor: COLOR_MAIN,
+                              backgroundColor: _isLoading ? Colors.grey : colorMain,
                               padding: EdgeInsets.symmetric(
                                   horizontal: 60, vertical: 25),
                               shape: RoundedRectangleBorder(
@@ -210,14 +259,62 @@ class _HomeState extends State<Home> {
                   ],
                 ),
               )),
-          if (_annotatedImageUrl != null)
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.only(top: 30),
+              child: Column(
+                children: [
+                  CircularProgressIndicator(
+                    color: colorMain,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    "Analyzing image...",
+                    style: textThemeColor.bodyLarge,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "This may take a few seconds",
+                    style: textThemeColor.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          if (_annotatedImageUrl != null && !_isLoading)
             Padding(
               padding: const EdgeInsets.only(top: 20),
-              child: Image.network(
-                _annotatedImageUrl!,
-                width: 200,
-                height: 200,
-                fit: BoxFit.cover,
+              child: Column(
+                children: [
+                  if (_predictedLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        "Detected: $_predictedLabel",
+                        style: textThemeColor.titleMedium,
+                      ),
+                    ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      _annotatedImageUrl!,
+                      width: 280,
+                      height: 280,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return SizedBox(
+                          width: 280,
+                          height: 280,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: colorMain,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             )
         ],

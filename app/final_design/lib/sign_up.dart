@@ -1,11 +1,11 @@
 import 'dart:developer';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:final_design/utils/auth_service.dart';
-import 'package:final_design/utils/aws_s3_api.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/custom_text_fields.dart';
 import 'package:final_design/utils/constants.dart';
+import 'package:final_design/utils/validators.dart';
+import 'package:final_design/auth/index.dart';
+import 'package:final_design/storage/index.dart';
 
 class SignUpScreen extends StatelessWidget {
   const SignUpScreen({super.key});
@@ -14,14 +14,14 @@ class SignUpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: "[App Name]",
+        title: "Pelta AI",
         height: getScreenHeight(context) * 0.30,
         action: TextButton(
           onPressed: () {
             Navigator.pushReplacementNamed(context, '/');
           },
           style: TextButton.styleFrom(
-            backgroundColor: COLOR_MAIN_LIGHT,
+            backgroundColor: colorMainLight,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
@@ -43,41 +43,113 @@ class SignUp extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUp> {
-  final _auth = AuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
 
-  Future<void> _signUpAndCreateFolder() async {
-    try {
-      setState(() => _isLoading = true);
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
-      // 1. Create Firebase user
-      User? user = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+  Future<void> _signUpAndCreateFolder() async {
+    // Validate inputs
+    final nameError = Validators.validateName(_nameController.text);
+    if (nameError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(nameError)),
+      );
+      return;
+    }
+
+    final emailError = Validators.validateEmail(_emailController.text);
+    if (emailError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emailError)),
+      );
+      return;
+    }
+
+    final passwordError = Validators.validatePassword(_passwordController.text);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passwordError)),
+      );
+      return;
+    }
+
+    final confirmError = Validators.validateConfirmPassword(
+      _passwordController.text,
+      _confirmPasswordController.text,
+    );
+    if (confirmError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(confirmError)),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Create user with auth provider (handles display name internally)
+      final result = await auth.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _nameController.text.trim(),
       );
 
-      if (user == null) throw Exception("User creation failed");
+      if (!mounted) return;
 
-      log("User created: ${user.uid}");
+      if (!result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.errorMessage ?? 'Sign-up failed')),
+        );
+        return;
+      }
 
-      // 2. Create S3 folder for the new user
-      await S3ApiService.createUserFolder(user.uid);
-      log("S3 folder created for user: ${user.uid}");
+      log("User created: ${result.userId}");
+
+      // 2. Try to create storage folder (non-blocking - don't prevent navigation if this fails)
+      if (result.userId != null) {
+        try {
+          await storage.createUserFolder(result.userId!);
+          log("Storage folder created for user: ${result.userId}");
+        } catch (storageError) {
+          // Storage folder creation failed (backend might be down)
+          // Don't block sign-up - folder can be created later on first upload
+          log("Warning: Storage folder creation failed: $storageError");
+        }
+      }
+
+      // SECURITY: Clear password fields after successful auth
+      _passwordController.clear();
+      _confirmPasswordController.clear();
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/verify_email');
       }
     } catch (e) {
       log("Sign up failed: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Sign-up failed: ${e.toString()}")),
-      );
+      // SECURITY: Clear password fields even on failure
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Sign-up failed: ${e.toString()}")),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -101,9 +173,15 @@ class _SignUpScreenState extends State<SignUp> {
             const SizedBox(height: 16),
             CustomTextFields.buildTextFieldDesign1(_emailController, "EMAIL"),
             const SizedBox(height: 16),
-            CustomTextFields.buildTextFieldDesign1(
-                _passwordController, "PASSWORD",
-                obscure: true),
+            PasswordTextField(
+              controller: _passwordController,
+              hint: "PASSWORD",
+            ),
+            const SizedBox(height: 16),
+            PasswordTextField(
+              controller: _confirmPasswordController,
+              hint: "CONFIRM PASSWORD",
+            ),
             const SizedBox(height: 20),
             Align(
               alignment: Alignment.center,
@@ -112,7 +190,7 @@ class _SignUpScreenState extends State<SignUp> {
                 child: TextButton(
                   onPressed: _isLoading ? null : _signUpAndCreateFolder,
                   style: TextButton.styleFrom(
-                    backgroundColor: COLOR_MAIN,
+                    backgroundColor: colorMain,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     shape: RoundedRectangleBorder(

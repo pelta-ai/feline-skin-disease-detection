@@ -25,7 +25,7 @@ class StaticMiniCalendar extends StatelessWidget {
             backgroundColor: streakData.getColor(
                 DateTime.utc(DateTime.now().year, DateTime.now().month,
                     getLast7DaysDateNumbers()[i]),
-                COLOR_GRAY),
+                colorGray),
             child: Text(getLast7DaysDateNumbers()[i].toString(),
                 style: textThemeWhite.titleSmall)),
       );
