@@ -25,13 +25,33 @@ class StreakData {
 
     switch (status) {
       case "done":
-        return COLOR_GREEN;
+        return colorGreen;
       case "high_risk":
-        return COLOR_RED;
+        return colorRed;
       case "low_risk":
-        return COLOR_YELLOW;
+        return colorYellow;
       default:
         return defaultColor;
     }
+  }
+
+  /// Calculate current streak (consecutive days with "done" status ending today)
+  int getCurrentStreak() {
+    int streak = 0;
+    DateTime checkDate = DateTime.now();
+
+    while (true) {
+      final normalizedDate = DateTime.utc(checkDate.year, checkDate.month, checkDate.day);
+      final status = _statusByDay[normalizedDate];
+
+      if (status == "done") {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+
+    return streak;
   }
 }

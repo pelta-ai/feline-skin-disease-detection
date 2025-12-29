@@ -3,7 +3,8 @@ import 'package:final_design/utils/custom_text_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/constants.dart';
-import 'package:final_design/utils/auth_service.dart';
+import 'package:final_design/utils/validators.dart';
+import 'package:final_design/auth/index.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -12,36 +13,21 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: CustomAppBar(
-          title: "[App Name]",
+          title: "Pelta AI",
           height: getScreenHeight(context) * 0.30,
-          action: TextButton(
-              onPressed: () {
-                Navigator.pushReplacementNamed(context, '/sign_up');
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: COLOR_MAIN_LIGHT,
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
-              child: Text(
-                "Get Started",
-                style: textThemeColor.bodySmall,
-              )),
         ),
         body: Login());
   }
 }
 
 class Login extends StatefulWidget {
+  const Login({super.key});
+
   @override
   State<Login> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<Login> {
-  final _auth = AuthService();
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -82,9 +68,10 @@ class _LoginScreenState extends State<Login> {
           const SizedBox(height: 16),
           CustomTextFields.buildTextFieldDesign1(_emailController, "EMAIL"),
           const SizedBox(height: 16),
-          CustomTextFields.buildTextFieldDesign1(
-              _passwordController, "PASSWORD",
-              obscure: true),
+          PasswordTextField(
+            controller: _passwordController,
+            hint: "PASSWORD",
+          ),
 
           // Log in text button
           Align(
@@ -98,7 +85,7 @@ class _LoginScreenState extends State<Login> {
                         _signIn();
                       },
                       style: TextButton.styleFrom(
-                        backgroundColor: COLOR_MAIN,
+                        backgroundColor: colorMain,
                         padding:
                             EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -118,12 +105,29 @@ class _LoginScreenState extends State<Login> {
             child: Padding(
               padding: const EdgeInsets.only(top: 45),
               child: TextButton(
-                onPressed: () {
-                  // TODO: Navigate to reset password screen or show dialog
-                },
+                onPressed: () => _resetPassword(),
                 child: Text(
                   "Forgot Password?",
                   style: textThemeColor.bodySmall,
+                ),
+              ),
+            ),
+          ),
+
+          // "New user? Sign up" text button
+          Align(
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/sign_up');
+                },
+                child: Text(
+                  "New user? Sign up",
+                  style: textThemeColor.bodySmall?.copyWith(
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
             ),
@@ -133,17 +137,71 @@ class _LoginScreenState extends State<Login> {
     ));
   }
 
-  _signIn() async {
-    final user = await _auth.loginUserWithEmailAndPassword(
-        email: _emailController.text, password: _passwordController.text);
+  Future<void> _signIn() async {
+    // Validate inputs
+    final emailError = Validators.validateEmail(_emailController.text);
+    if (emailError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emailError)),
+      );
+      return;
+    }
 
-    if (user != null) {
-      log("User Created Succesfully");
+    final passwordError = Validators.validatePassword(_passwordController.text);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passwordError)),
+      );
+      return;
+    }
+
+    final result = await auth.signIn(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      log("User Logged In Successfully");
+      // SECURITY: Clear password field after successful auth
+      _passwordController.clear();
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      // Show error: user does not exist or wrong credentials
+      // SECURITY: Clear password field on failure too
+      _passwordController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid email or password')),
+        SnackBar(content: Text(result.errorMessage ?? 'Login failed')),
+      );
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email address first'),
+        ),
+      );
+      return;
+    }
+
+    final result = await auth.sendPasswordResetEmail(email);
+
+    if (!mounted) return;
+
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset email sent! Check your inbox.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.errorMessage ?? 'Failed to send reset email')),
       );
     }
   }
