@@ -5,7 +5,7 @@
 //   Development (default):
 //     flutter run
 //
-//   Development with mocks (no Firebase/S3 - fast testing):
+//   Development with mocks (no Supabase/S3 - fast testing):
 //     flutter run --dart-define=USE_MOCKS=true
 //
 //   Production:
@@ -40,12 +40,17 @@ class AppConfig {
     defaultValue: 'development',
   );
 
-  /// Use mock providers (no Firebase/S3 calls)
+  /// Use mock providers (no Supabase/S3 calls)
   /// Usage: --dart-define=USE_MOCKS=true
   static const bool useMocks = bool.fromEnvironment(
     'USE_MOCKS',
     defaultValue: false,
   );
+
+  // Note: Storage provider is controlled by the BACKEND, not Flutter.
+  // The backend uses STORAGE_PROVIDER env var to choose Supabase/S3/Mock.
+  // Flutter just calls the backend API - it doesn't need to know which
+  // storage the backend uses.
 
   static Environment get currentEnvironment {
     return _envString == 'production'
@@ -57,10 +62,10 @@ class AppConfig {
   // BACKEND URLs
   // ============================================
 
-  /// Development backend URL (ngrok tunnel for local testing)
-  /// Update this when you restart ngrok
-  /// IMPORTANT: Replace this with your actual ngrok URL (e.g., "https://abc123.ngrok-free.app")
-  static const String _devBackendUrl = "";
+  /// Development backend URL
+  /// For local testing: http://localhost:5000
+  /// For mobile device testing: use ngrok URL (e.g., "https://abc123.ngrok-free.app")
+  static const String _devBackendUrl = "http://localhost:5000";
 
   /// Production backend URL (Hugging Face Spaces or other hosting)
   /// TODO: Update this URL after deploying to Hugging Face Spaces

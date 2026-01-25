@@ -1,9 +1,10 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:final_design/utils/aws_s3_api.dart';
+import 'package:final_design/storage/index.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/mini_calendar.dart';
 import 'package:final_design/drawer.dart';
@@ -127,9 +128,8 @@ class _HomeState extends State<Home> {
   String? _annotatedImageUrl;
   bool _isLoading = false;
 
-  /// Processes the picked image: uploads to S3, runs AI predictions, and displays results
+  /// Processes the picked image: uploads, runs AI predictions, and displays results
   Future<void> _processImage(XFile pickedFile) async {
-    final file = File(pickedFile.path);
     final fileName = pickedFile.name;
     final userId = currentUser!;
 
@@ -140,23 +140,29 @@ class _HomeState extends State<Home> {
     });
 
     try {
-      // 1. Upload image
-      await S3ApiService.uploadFile(file, userId, false);
+      // 1. Upload image (use bytes on web, file on mobile)
+      if (kIsWeb) {
+        final bytes = await pickedFile.readAsBytes();
+        await storage.uploadFileBytes(bytes, fileName, userId, isAnnotated: false);
+      } else {
+        final file = File(pickedFile.path);
+        await storage.uploadFile(file, userId, isAnnotated: false);
+      }
 
-      // 2. Get today's folder name from backend
-      final today = await S3ApiService.getTodayDateFromBackend();
+      // 2. Get today's date
+      final today = await storage.getTodayDate();
       if (today == null) {
-        log("Could not get date from backend");
+        log("Could not get date");
         return;
       }
 
-      final s3Key = "$userId/$today/images/$fileName";
+      final storageKey = "$userId/$today/images/$fileName";
 
-      // 3. Generate predictions (this will download from S3 + run YOLO+CNN)
-      final result = await S3ApiService.generateAIPredictions(
+      // 3. Generate predictions
+      final result = await storage.generateAIPredictions(
         userId: userId,
         fileName: fileName,
-        s3Key: s3Key,
+        s3Key: storageKey,
       );
 
       if (!mounted || result == null) return;

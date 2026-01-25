@@ -44,6 +44,9 @@ dependencies:
   path_provider: ^2.1.1
   pin_code_fields: ^8.0.1
 
+  # Note: Storage is handled by the backend (Firebase/S3).
+  # Flutter just calls the backend API - no direct storage SDK needed.
+
   # Observability
   firebase_crashlytics: ^4.0.0
   firebase_analytics: ^11.0.0

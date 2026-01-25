@@ -111,6 +111,28 @@ class MockStorageProvider implements AppStorageProvider {
   }
 
   @override
+  Future<String?> uploadFileBytes(List<int> bytes, String fileName, String userId, {bool isAnnotated = false}) async {
+    try {
+      final baseDir = await _getBaseDir();
+      final today = _getTodayDate();
+      final folder = isAnnotated ? 'annotated_images' : 'images';
+
+      // Ensure directory exists
+      final targetDir = Directory('${baseDir.path}/$userId/$today/$folder');
+      await targetDir.create(recursive: true);
+
+      // Write bytes to file
+      final targetPath = '${targetDir.path}/$fileName';
+      final file = File(targetPath);
+      await file.writeAsBytes(bytes);
+
+      return '$userId/$today/$folder/$fileName';
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
   Future<String?> getFileUrl(String path) async {
     try {
       final baseDir = await _getBaseDir();
