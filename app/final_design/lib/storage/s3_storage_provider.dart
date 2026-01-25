@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:final_design/storage/app_storage_provider.dart';
 import 'package:final_design/utils/aws_s3_api.dart';
 
-/// S3 implementation of AppStorageProvider.
+/// Storage provider that delegates operations to a backend API.
 ///
-/// This is the production storage provider that uses AWS S3 via the Flask backend.
-/// All operations go through S3ApiService which calls the backend API.
+/// All storage operations (upload, download, list, etc.) are performed
+/// via HTTP calls to the backend service.
 class S3StorageProvider implements AppStorageProvider {
   @override
   Future<bool> createUserFolder(String userId) async {
@@ -41,6 +41,20 @@ class S3StorageProvider implements AppStorageProvider {
       if (today == null) return null;
       final folder = isAnnotated ? 'annotated_images' : 'images';
       return '$userId/$today/$folder/${file.path.split('/').last}';
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<String?> uploadFileBytes(List<int> bytes, String fileName, String userId, {bool isAnnotated = false}) async {
+    try {
+      await S3ApiService.uploadFileBytes(bytes, fileName, userId, isAnnotated);
+      // Return the expected path
+      final today = await getTodayDate();
+      if (today == null) return null;
+      final folder = isAnnotated ? 'annotated_images' : 'images';
+      return '$userId/$today/$folder/$fileName';
     } catch (e) {
       return null;
     }

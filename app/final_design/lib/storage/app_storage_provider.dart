@@ -44,6 +44,17 @@ abstract class AppStorageProvider {
   /// Returns: The remote path if successful, null otherwise
   Future<String?> uploadFile(File file, String userId, {bool isAnnotated = false});
 
+  /// Upload file bytes to storage (works on web)
+  ///
+  /// Args:
+  ///   bytes: The file content as bytes
+  ///   fileName: Name of the file
+  ///   userId: The user's ID
+  ///   isAnnotated: Whether this is an annotated image
+  ///
+  /// Returns: The remote path if successful, null otherwise
+  Future<String?> uploadFileBytes(List<int> bytes, String fileName, String userId, {bool isAnnotated = false});
+
   /// Get a URL to access a file
   ///
   /// For S3: Returns a pre-signed URL

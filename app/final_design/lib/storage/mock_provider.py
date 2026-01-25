@@ -120,11 +120,14 @@ class MockStorageProvider(StorageProvider):
             return None
 
     def get_file_url(self, path: str, expires_in: int = 3600) -> Optional[str]:
-        """Generate a mock URL for a file."""
+        """Generate a URL for serving a file via the backend /serve-file endpoint."""
         self._log_call("get_file_url", path=path, expires_in=expires_in)
 
         if path in self._files:
-            return f"https://mock-storage.example.com/{path}?expires={expires_in}"
+            # Return URL pointing to backend's /serve-file endpoint
+            # This allows web clients to fetch files via HTTP
+            backend_url = os.environ.get('BACKEND_URL', 'http://localhost:5000')
+            return f"{backend_url}/serve-file?path={path}"
 
         return None
 
