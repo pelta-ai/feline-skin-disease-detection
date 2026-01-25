@@ -6,6 +6,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, g
+from flask_cors import CORS
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -31,6 +32,9 @@ from src.generate_final_image import generate_final_image
 import src.utils.constants as constants
 
 app = Flask(__name__)
+
+# Enable CORS for local development (Flutter web runs on different port)
+CORS(app)
 
 # ============================================
 # OpenTelemetry Setup (basic tracing)
@@ -149,6 +153,39 @@ def get_file_url():
         return jsonify({'url': url})
     except Exception as e:
         app.logger.error(f"Error generating URL: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/serve-file', methods=['GET'])
+def serve_file():
+    """Serve a file from storage (for mock mode where URLs aren't real)."""
+    from flask import Response
+    try:
+        path = request.args.get('path')
+        if not path:
+            return jsonify({'error': 'Path is required'}), 400
+
+        # Get file content from mock storage
+        if hasattr(storage, '_files') and path in storage._files:
+            content = storage._files[path]
+
+            # Determine content type based on extension
+            ext = path.lower().split('.')[-1] if '.' in path else ''
+            content_types = {
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'png': 'image/png',
+                'gif': 'image/gif',
+                'webp': 'image/webp',
+                'txt': 'text/plain',
+                'json': 'application/json',
+            }
+            content_type = content_types.get(ext, 'application/octet-stream')
+
+            return Response(content, mimetype=content_type)
+        else:
+            return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        app.logger.error(f"Error serving file: {e}")
         return jsonify({'error': str(e)}), 500
     
 @app.post("/download-file")

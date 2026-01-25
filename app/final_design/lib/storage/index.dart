@@ -1,24 +1,20 @@
 /// Storage Module
 ///
 /// Provides a clean abstraction for storage operations.
-/// Automatically selects the appropriate provider based on build flags.
 ///
 /// Usage:
 ///   import 'package:final_design/storage/index.dart';
 ///
-///   // Use the global storage instance
 ///   await storage.createUserFolder('user123');
 ///   await storage.uploadFile(file, 'user123');
+///   await storage.getFileUrl('user123/2025-01-19/images/photo.jpg');
 ///
-///   // In mock mode, you can clear all data
-///   if (AppConfig.useMocks) {
-///     await storage.clearAllData();
-///   }
-///
-/// Build flags:
-///   flutter run --dart-define=USE_MOCKS=true  → MockStorageProvider (local files)
-///   flutter run                                → S3StorageProvider (real S3)
+/// Providers:
+///   - S3StorageProvider: Calls backend API for storage operations
+///   - MockStorageProvider: Local file storage for offline testing (mobile/desktop only)
 library;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 export 'app_storage_provider.dart';
 export 's3_storage_provider.dart';
@@ -31,14 +27,24 @@ import 'package:final_design/utils/app_config.dart';
 
 /// Global storage provider instance.
 ///
-/// Automatically selects provider based on build flags:
-/// - USE_MOCKS=true → MockStorageProvider (local file storage)
-/// - USE_MOCKS=false → S3StorageProvider (real AWS S3)
-///
-/// For manual override in tests, use [setStorageProvider].
-AppStorageProvider _storageProvider = AppConfig.useMocks
-    ? MockStorageProvider()
-    : S3StorageProvider();
+/// On web: Always uses S3StorageProvider (backend handles storage)
+/// On mobile/desktop with USE_MOCKS=true: Uses MockStorageProvider (local files)
+/// On mobile/desktop without mocks: Uses S3StorageProvider (backend)
+AppStorageProvider _storageProvider = _selectProvider();
+
+AppStorageProvider _selectProvider() {
+  // Web can't use local file storage, always call backend
+  if (kIsWeb) {
+    return S3StorageProvider();
+  }
+
+  // Mobile/desktop can use local mock storage
+  if (AppConfig.useMocks) {
+    return MockStorageProvider();
+  } else {
+    return S3StorageProvider();
+  }
+}
 
 /// Get the current storage provider instance.
 AppStorageProvider get storage => _storageProvider;
@@ -54,17 +60,15 @@ void setStorageProvider(AppStorageProvider provider) {
   _storageProvider = provider;
 }
 
-/// Factory function to create a new storage provider.
+/// Factory function to create a storage provider.
 ///
 /// Args:
-///   providerType: 's3' or 'mock'
-///
-/// Example:
-///   final storage = getStorageProvider('mock');
-AppStorageProvider getStorageProvider([String providerType = 's3']) {
+///   providerType: 'backend' (default) or 'mock'
+AppStorageProvider getStorageProvider([String providerType = 'backend']) {
   switch (providerType.toLowerCase()) {
     case 'mock':
       return MockStorageProvider();
+    case 'backend':
     case 's3':
     default:
       return S3StorageProvider();

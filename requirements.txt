@@ -3,9 +3,11 @@
 
 # Web Framework
 flask>=2.3.0
+flask-cors>=4.0.0
 
-# AWS SDK
-boto3>=1.26.0
+# Cloud Storage
+supabase>=2.0.0        # Supabase Storage (default)
+boto3>=1.26.0          # AWS S3 (legacy/optional)
 botocore>=1.29.0
 
 # Machine Learning - YOLO

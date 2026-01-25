@@ -80,7 +80,29 @@ class S3ApiService {
     }
   }
 
-  // Upload a file
+  // Upload a file using bytes (works on web and mobile)
+  static Future<void> uploadFileBytes(
+      List<int> bytes, String fileName, String userId, bool isAnnotated) async {
+    try {
+      final uri = Uri.parse('$baseUrl/add-file');
+      final request = http.MultipartRequest('POST', uri)
+        ..fields['user_id'] = userId
+        ..fields['is_annotated'] = isAnnotated.toString()
+        ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: fileName));
+
+      final response = await request.withDefaultHeaders().send();
+
+      if (response.statusCode == 200) {
+        log('Upload successful');
+      } else {
+        log('Upload failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      log("Upload error: $e");
+    }
+  }
+
+  // Upload a file (legacy - for mobile only)
   static Future<void> uploadFile(
       File file, String userId, bool isAnnotated) async {
     try {

@@ -1,0 +1,170 @@
+# Changelog
+
+## [Unreleased] - supabasestorage branch
+
+### Added
+- **Supabase Storage integration** as the new default storage provider
+  - `lib/storage/supabase_provider.py` - Full Supabase Storage implementation
+  - Supports user uploads, annotated images, and diagnosis files
+  - Uses YYYY-MM-DD date format for folder paths
+
+### Changed
+- Default storage provider changed from Firebase to Supabase in `lib/storage/__init__.py`
+- Updated `requirements.txt` - added `supabase>=2.0.0`
+- Updated `.env.example` with Supabase configuration variables (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`)
+
+### Removed
+- `firebase-admin` dependency from `requirements.txt`
+- `lib/storage/firebase_provider.py` - Firebase Storage provider
+- `firebase.json`, `.firebaserc`, `storage.rules` - Firebase Storage config files
+
+### Note
+Firebase Auth is still used in the Flutter app (free tier). Only Firebase Storage was removed.
+
+---
+
+## [Previous] - deployment-readiness branch
+
+Changes made to prepare the app for production deployment.
+
+---
+
+## Modified Files
+
+### Backend (Python/Flask)
+
+**app/final_design/app.py**
+- Added OpenTelemetry tracing for request visibility
+- Added structured JSON logging with timestamps and request IDs
+- Flask debug mode now reads from `FLASK_DEBUG` env var instead of hardcoded `True`
+- Added OTLP exporter support for sending traces to Grafana Cloud
+- Now uses `StorageProvider` abstraction instead of direct S3 calls
+
+**app/final_design/lib/storage/s3_provider.py**
+- New S3 implementation of `StorageProvider` interface
+- AWS credentials read from environment variables
+- ISO 8601 date format (`2025-12-19`) for sortable S3 paths
+- Proper logging with `logger` calls
+
+**app/final_design/lib/storage/mock_provider.py**
+- Mock implementation for testing without AWS
+
+**requirements.txt** (new)
+- Lists all Python dependencies for the project
+
+#### Removed (legacy code replaced by storage abstraction)
+- ~~`lib/aws_storage/aws_s3.py`~~ - Replaced by `lib/storage/s3_provider.py`
+- ~~`lib/aws_storage/aws_s3_constants.py`~~ - Config now via environment variables
+- ~~`test/aws_storage/aws_s3_test.py`~~ - Replaced by `tests/test_storage_provider.py`
+
+---
+
+### Frontend (Flutter)
+
+**app/final_design/lib/main.dart**
+- Added Firebase Crashlytics initialization to catch uncaught errors
+- Added Firebase Analytics initialization
+- Added auth state wrapper to handle login/verification flow
+
+**app/final_design/lib/utils/app_config.dart** (new)
+- Centralized configuration for backend URL and environment switching
+- Supports dev/prod environments via a single toggle
+
+**app/final_design/lib/utils/request_id.dart** (new)
+- Generates UUIDs for correlating frontend requests with backend logs
+
+**app/final_design/lib/utils/aws_s3_api.dart**
+- Added `X-Request-ID` header to all API requests for tracing
+- Backend URL now comes from AppConfig instead of hardcoded
+- Refactored to use fluent extensions for headers (`_defaultHeaders().withJson()`)
+- Removed duplicate `_headers()` and `_addRequestId()` methods
+
+**app/final_design/lib/utils/validators.dart** (new)
+- Email and password validation functions
+
+**app/final_design/lib/auth/** (new directory)
+- `auth_provider.dart` - Abstract interface for auth operations
+- `auth_result.dart` - Result type for auth operations
+- `firebase_auth_provider.dart` - Firebase implementation
+- `mock_auth_provider.dart` - Mock implementation for testing
+- `index.dart` - Factory function to get the right provider
+
+**app/final_design/lib/storage/** (new directory)
+- `storage_provider.py` - Abstract interface for storage operations (Python)
+- `s3_provider.py` - S3 implementation (Python)
+- `mock_provider.py` - Mock implementation for testing (Python)
+- `__init__.py` - Factory function to get provider based on env
+- `storage_provider.dart` - Abstract interface (Dart/Flutter)
+- `s3_storage_provider.dart` - S3 implementation (Dart/Flutter)
+- `mock_storage_provider.dart` - Mock implementation (Dart/Flutter)
+
+**app/final_design/lib/email_verification.dart** (new)
+- Screen for email verification flow after signup
+
+**app/final_design/pubspec.yaml**
+- Added `firebase_crashlytics`, `firebase_analytics`, `uuid` dependencies
+
+**app/final_design/.env.example** (new)
+- Documents all required environment variables
+
+---
+
+### UI Files (Dart naming convention fixes)
+
+These files had variable names changed from `camelCase` to match Dart conventions:
+
+- `lib/home.dart`
+- `lib/login.dart`
+- `lib/sign_up.dart`
+- `lib/drawer.dart`
+- `lib/streak.dart`
+- `lib/streak_data.dart`
+- `lib/results.dart`
+- `lib/mini_calendar.dart`
+- `lib/utils/constants.dart`
+- `lib/utils/custom_app_bar.dart`
+- `lib/utils/custom_text_fields.dart`
+
+---
+
+### Android/Build Files
+
+**android/app/build.gradle**
+- Added firebase-analytics dependency
+
+**android/gradle/wrapper/gradle-wrapper.properties**
+- Updated gradle version
+
+**android/settings.gradle**
+- Updated plugin versions
+
+**Generated plugin registrant files** (auto-generated by Flutter)
+- `linux/flutter/generated_plugin_registrant.*`
+- `macos/Flutter/GeneratedPluginRegistrant.swift`
+- `windows/flutter/generated_plugin_registrant.*`
+- `pubspec.lock`
+
+---
+
+### Documentation
+
+**LOCAL_TESTING_GUIDE.md** (new)
+- Instructions for running the app locally with ngrok
+
+---
+
+## New Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| `lib/auth/` | Auth provider abstraction (Firebase + Mock) |
+| `lib/storage/` | Storage provider abstraction (S3 + Mock) - replaces `lib/aws_storage/` |
+| `tests/` | Unit tests for providers |
+| `.claude/` | Claude Code settings |
+
+## Removed Directories
+
+| Directory | Reason |
+|-----------|--------|
+| `lib/aws_storage/` | Replaced by `lib/storage/` with provider pattern |
+| `test/aws_storage/` | Tests moved to `tests/` |

@@ -121,7 +121,7 @@ class StorageProvider(ABC):
         - International standard
 
         Returns:
-            Date string like "2025-12-19"
+            Date string like "2026-01-24"
         """
         return date.today().strftime("%Y-%m-%d")
 
@@ -133,7 +133,7 @@ class StorageProvider(ABC):
             subfolder: Optional subfolder (images, annotated_images, diagnosis)
 
         Returns:
-            Path like "user123/2025-12-19/images/"
+            Path like "user123/2026-01-24/images/"
         """
         today = self.get_today_date()
         if subfolder:
