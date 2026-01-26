@@ -20,6 +20,9 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          # Set git identity for the orphan commit
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           # Create a fresh commit without history (avoids large files in old commits)
           git checkout --orphan hf-deploy
           git add -A
