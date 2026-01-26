@@ -23,10 +23,11 @@ jobs:
           # Set git identity for the orphan commit
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          # Create a fresh commit without history (avoids large files in old commits)
+          # Remove files not needed for deployment
+          rm -rf data/ runs/ test_results/ sample_model_data/ notebooks/ yolov8n.pt *.png
+          # Create a fresh commit without history
           git checkout --orphan hf-deploy
-          # Only add files needed for deployment (exclude training data, YOLO runs, etc.)
-          git add app/ src/ trained_models/ Dockerfile requirements.txt README_HF.md .gitattributes
+          git add -A
           git commit -m "Deploy to Hugging Face Spaces"
           git remote add hf https://huggingface.co/spaces/pelta-ai/pelta-ai-backend || true
           git remote set-url hf https://user:$HF_TOKEN@huggingface.co/spaces/pelta-ai/pelta-ai-backend
