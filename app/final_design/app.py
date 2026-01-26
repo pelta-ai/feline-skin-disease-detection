@@ -269,6 +269,15 @@ def generate_ai_predictions():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for container orchestration."""
+    return jsonify({
+        "status": "healthy",
+        "service": "pelta-ai-backend"
+    }), 200
+
+
 if __name__ == "__main__":
     # Configuration via environment variables (secure for production)
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
