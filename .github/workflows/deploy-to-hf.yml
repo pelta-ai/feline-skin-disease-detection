@@ -25,6 +25,8 @@ jobs:
           git config user.email "actions@github.com"
           # Remove files not needed for deployment
           rm -rf data/ runs/ test_results/ sample_model_data/ notebooks/ yolov8n.pt *.png
+          # Remove Flutter platform directories (only need Flask backend)
+          rm -rf app/final_design/macos app/final_design/ios app/final_design/android app/final_design/windows app/final_design/linux app/final_design/web app/final_design/test
           # Create a fresh commit without history
           git checkout --orphan hf-deploy
           git add -A
