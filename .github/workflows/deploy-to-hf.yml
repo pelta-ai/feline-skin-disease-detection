@@ -25,7 +25,8 @@ jobs:
           git config user.email "actions@github.com"
           # Create a fresh commit without history (avoids large files in old commits)
           git checkout --orphan hf-deploy
-          git add -A
+          # Only add files needed for deployment (exclude training data, YOLO runs, etc.)
+          git add app/ src/ trained_models/ Dockerfile requirements.txt README_HF.md .gitattributes
           git commit -m "Deploy to Hugging Face Spaces"
           git remote add hf https://huggingface.co/spaces/pelta-ai/pelta-ai-backend || true
           git remote set-url hf https://user:$HF_TOKEN@huggingface.co/spaces/pelta-ai/pelta-ai-backend
