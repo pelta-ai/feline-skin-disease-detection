@@ -1,13 +1,14 @@
 # Project Instructions for Claude
 
 ## Git Workflow - IMPORTANT
-Always seek user consent before:
-- Pushing a branch to remote
-- Creating a pull request
-- Merging a pull request
+- **Never commit directly to main** - always create a separate branch first
+- Always seek user consent before:
+  - Pushing a branch to remote
+  - Creating a pull request
+  - Merging a pull request
 
-## Git Commits
-- Do NOT add "Co-Authored-By" lines to commit messages
+## Git Commits & PRs
+- Do NOT reference Claude or AI in commits, PR titles, or PR descriptions
 - Keep commit messages concise and descriptive
 
 ## Project Overview

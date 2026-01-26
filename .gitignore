@@ -53,3 +53,6 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+
+# Large training data files (not needed for inference)
+*.npz
