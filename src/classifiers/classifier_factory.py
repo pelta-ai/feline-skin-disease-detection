@@ -1,6 +1,6 @@
 """Factory for creating classifier instances by backbone name."""
 
-from src.classifiers.mobile_net_v2_classifier import MobileNetV2Classifier
+from .mobile_net_v2_classifier import MobileNetV2Classifier
 
 
 class ClassifierFactory:

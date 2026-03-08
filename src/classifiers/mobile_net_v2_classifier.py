@@ -3,7 +3,7 @@
 from keras.applications import MobileNetV2
 from keras.applications.mobilenet_v2 import preprocess_input
 
-from src.classifiers.base_classifier import BaseClassifier
+from .base_classifier import BaseClassifier
 
 
 class MobileNetV2Classifier(BaseClassifier):

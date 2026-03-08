@@ -1,7 +1,5 @@
-import os, sys
 import numpy as np
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.classifiers.classifier_factory import ClassifierFactory
 
 seeds = [1, 2, 3, 4, 5]

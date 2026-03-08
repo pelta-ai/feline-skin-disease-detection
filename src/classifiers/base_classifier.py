@@ -14,9 +14,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
 
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import utils.constants as constants
+from ..utils import constants
 
 
 class BaseClassifier(ABC):
