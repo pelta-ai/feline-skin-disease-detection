@@ -1,11 +1,13 @@
 """Factory for creating classifier instances by backbone name."""
 
 from .mobile_net_v2_classifier import MobileNetV2Classifier
+from .mobile_net_v3_small_classifier import MobileNetV3SmallClassifier
 
 
 class ClassifierFactory:
     _registry = {
         "mobilenet_v2": MobileNetV2Classifier,
+        "mobilenet_v3_small": MobileNetV3SmallClassifier,
     }
 
     @classmethod
