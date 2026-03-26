@@ -2,12 +2,14 @@
 
 from .mobile_net_v2_classifier import MobileNetV2Classifier
 from .mobile_net_v3_small_classifier import MobileNetV3SmallClassifier
+from .resnet_18_classifier import ResNet18Classifier
 
 
 class ClassifierFactory:
     _registry = {
         "mobilenet_v2": MobileNetV2Classifier,
         "mobilenet_v3_small": MobileNetV3SmallClassifier,
+        "resnet18": ResNet18Classifier,
     }
 
     @classmethod
