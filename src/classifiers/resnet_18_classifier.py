@@ -8,7 +8,7 @@ from .base_classifier import BaseClassifier
 
 
 class ResNet18Classifier(BaseClassifier):
-    _HUB_URL = "https://tfhub.dev/google/imagenet/resnet_v2_18/feature_vector/4"
+    _HUB_URL = "https://www.kaggle.com/models/google/resnet-v2/TensorFlow2/18-feature-vector/2"
 
     def _load_base(self):
         return hub.KerasLayer(
