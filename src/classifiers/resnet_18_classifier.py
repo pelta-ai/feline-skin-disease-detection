@@ -8,7 +8,7 @@ from .base_classifier import BaseClassifier
 
 
 class ResNet18Classifier(BaseClassifier):
-    def _residual_block(x, filters, stride=1):
+    def _residual_block(self, x, filters, stride=1):
         shortcut = x
 
         x = layers.Conv2D(filters=filters, kernel_size=3, strides=stride, padding="same", use_bias=False)(x)
@@ -18,11 +18,13 @@ class ResNet18Classifier(BaseClassifier):
         x = layers.Conv2D(filters=filters, kernel_size=3, strides=1, padding="same", use_bias=False)(x)
         x = layers.BatchNormalization()(x)
 
-        if stride != 1 or shortcut.shape[-1] != filters:                                                           
+        input_channels = shortcut.shape[-1]
+
+        if stride != 1 or input_channels != filters:                                                        
             shortcut = layers.Conv2D(filters, 1, strides=stride, padding="same", use_bias=False)(shortcut)         
             shortcut = layers.BatchNormalization()(shortcut)           
 
-        x = layers.Add()[x, shortcut]
+        x = layers.Add()([x, shortcut])
         x = layers.ReLU()(x)
 
         return x
@@ -47,7 +49,10 @@ class ResNet18Classifier(BaseClassifier):
         x = self._residual_block(x, 512, stride=2)
         x = self._residual_block(x, 512)
 
-        model = models.Model(inputs, x, name="resnet18")
+        x = layers.GlobalAveragePooling2D()(x)
+        outputs = layers.Dense(6, activation="softmax")(x)
+
+        model = models.Model(inputs, outputs, name="resnet18")
 
         if not trainable_backbone:
             model.trainable = False
