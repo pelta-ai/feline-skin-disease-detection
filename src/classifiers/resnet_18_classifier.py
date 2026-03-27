@@ -64,7 +64,7 @@ class ResNet18Classifier(BaseClassifier):
                     
         model.compile(
             optimizer=keras.optimizers.Adam(learning_rate=kwargs.get('learning_rate', 1e-3)),
-            loss='categorical_crossentropy',
+            loss='sparse_categorical_crossentropy',
             metrics=['accuracy']
         )
 
