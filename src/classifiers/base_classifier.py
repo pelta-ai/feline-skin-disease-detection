@@ -9,10 +9,12 @@ Subclasses only need to implement two methods:
 import os
 from abc import ABC, abstractmethod
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
+from sklearn.metrics import ConfusionMatrixDisplay
 
 from ..utils import constants
 
@@ -146,7 +148,7 @@ class BaseClassifier(ABC):
         macro_f1 = float(np.mean(f1))
         return acc, precision, recall, f1, macro_f1
 
-    def evaluate(self, model=None, model_path=None):
+    def evaluate(self, model=None, model_path=None, display_confusion_matrix=False):
         if model is None:
             if model_path is None:
                 raise ValueError("Provide model or model_path.")
@@ -159,6 +161,9 @@ class BaseClassifier(ABC):
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
 
+        if display_confusion_matrix == True:
+            self._display_confusion_matrix(y_true=y_true, y_pred=y_pred)
+
         return {
             "accuracy": acc,
             "macro_f1": macro_f1,
@@ -167,3 +172,10 @@ class BaseClassifier(ABC):
             "per_class_f1": f1,
             "confusion_matrix": cm,
         }
+
+    def _display_confusion_matrix(self, y_true, y_pred):
+        cm = self._confusion_matrix(y_true, y_pred)
+        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        display.plot(ax=ax, cmap=plt.cm.Blues)
+        plt.show()
