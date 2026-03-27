@@ -3,6 +3,7 @@
 from tensorflow import keras
 from keras import layers, models
 
+from ..utils import constants
 from .base_classifier import BaseClassifier
 
 
@@ -26,10 +27,10 @@ class ResNet18Classifier(BaseClassifier):
 
         return x
     
-    def _build_model(self, input_shape, trainable_backbone=False, train_from_block=None):
+    def _build_model(self, input_shape=constants.IMG_SIZE + (3,), trainable_backbone=False, train_from_block=None):
         inputs = layers.Input(shape=input_shape)
 
-        x = layers.Conv2D(filters=64, kernel_size=7, strides=2, padding="same", use_bias=False)
+        x = layers.Conv2D(filters=64, kernel_size=7, strides=2, padding="same", use_bias=False)(inputs)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
         x = layers.MaxPooling2D(3, strides=2, padding="same")(x)
