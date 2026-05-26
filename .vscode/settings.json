@@ -1,6 +1,6 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "cmake.sourceDirectory": "C:/Data/Anish/Github/feline_skin_disease_detection/app/design_1/linux",
+    "cmake.sourceDirectory": "C:/Data/Anish/Github/feline-skin-disease-detection/app/final_design/linux",
     "python.testing.pytestEnabled": true,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestArgs": [

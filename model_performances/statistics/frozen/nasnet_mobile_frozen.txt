@@ -1,0 +1,35 @@
+NASNetMobile Frozen Feature Extraction
+======================================
+Backbone: NASNetMobile (ImageNet pretrained, frozen)
+Epochs: 10 | Seeds: 15 | LR: 1e-3
+
+Per-Seed Results:
+  Seed 1: accuracy=0.9156, macro_f1=0.9071
+  Seed 2: accuracy=0.9156, macro_f1=0.9056
+  Seed 3: accuracy=0.9026, macro_f1=0.8912
+  Seed 4: accuracy=0.8896, macro_f1=0.8758
+  Seed 5: accuracy=0.8831, macro_f1=0.8688
+  Seed 6: accuracy=0.8961, macro_f1=0.8880
+  Seed 7: accuracy=0.8831, macro_f1=0.8687
+  Seed 8: accuracy=0.8896, macro_f1=0.8810
+  Seed 9: accuracy=0.8831, macro_f1=0.8730
+ Seed 10: accuracy=0.8831, macro_f1=0.8741
+ Seed 11: accuracy=0.8831, macro_f1=0.8724
+ Seed 12: accuracy=0.9156, macro_f1=0.9059
+ Seed 13: accuracy=0.8961, macro_f1=0.8852
+ Seed 14: accuracy=0.8896, macro_f1=0.8819
+ Seed 15: accuracy=0.8896, macro_f1=0.8784
+
+Summary:
+  Accuracy: 0.8944 +/- 0.0124
+  Macro F1: 0.8838 +/- 0.0133
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class             Precision    Recall      F1
+    demodicosis       0.987500   1.000000   0.993651
+    dermatitis        0.848109   0.743860   0.789350
+    flea_allergy      0.891054   0.881481   0.884788
+    fungus            0.906157   0.965217   0.933053
+    ringworm          0.896621   0.924731   0.909402
+    scabies           0.811047   0.779710   0.792589

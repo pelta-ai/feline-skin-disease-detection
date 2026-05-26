@@ -1,0 +1,62 @@
+--- Processing: convnext_tiny (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   1.000000 1.000000  1.000000
+  dermatitis   0.942263 0.747368  0.831192
+flea_allergy   0.832772 0.943210  0.883840
+      fungus   0.956000 1.000000  0.977423
+    ringworm   0.971661 0.916129  0.942635
+     scabies   0.880103 0.910145  0.893378
+
+--- Processing: efficientnet_b0 (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   0.997917 1.000000  0.998942
+  dermatitis   0.945229 0.712281  0.811261
+flea_allergy   0.895954 0.923457  0.909145
+      fungus   0.956444 1.000000  0.977541
+    ringworm   0.957528 0.911828  0.933946
+     scabies   0.764855 0.901449  0.827223
+
+--- Processing: efficientnet_v2_b0 (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   1.000000 1.000000  1.000000
+  dermatitis   0.921673 0.621053  0.741610
+flea_allergy   0.830707 0.923457  0.874275
+      fungus   0.988889 1.000000  0.994326
+    ringworm   0.906549 0.909677  0.907843
+     scabies   0.795992 0.886957  0.837970
+
+--- Processing: mobilenet_v2 (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   0.963005 1.000000  0.981085
+  dermatitis   0.945768 0.614035  0.740134
+flea_allergy   0.956993 0.837037  0.890445
+      fungus   0.933904 0.976812  0.953769
+    ringworm   0.933228 0.939785  0.934946
+     scabies   0.738716 0.947826  0.825209
+
+--- Processing: mobilenet_v3_small (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   1.000000 1.000000  1.000000
+  dermatitis   0.908407 0.764912  0.827547
+flea_allergy   0.859742 0.913580  0.885396
+      fungus   0.943141 0.994203  0.967652
+    ringworm   0.954721 0.939785  0.946894
+     scabies   0.851353 0.860870  0.854842
+
+--- Processing: nasnet_mobile (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   0.949187 1.000000  0.973387
+  dermatitis   0.954327 0.628070  0.754033
+flea_allergy   0.903779 0.874074  0.887748
+      fungus   0.862295 0.971014  0.911366
+    ringworm   0.938379 0.916129  0.925483
+     scabies   0.810925 0.915942  0.858519
+
+--- Processing: resnet50 (finetuned) ---
+       Class  Precision   Recall  F1-Score
+ demodicosis   0.997917 1.000000  0.998942
+  dermatitis   0.883182 0.726316  0.791149
+flea_allergy   0.886628 0.925926  0.904643
+      fungus   0.947608 0.979710  0.961981
+    ringworm   0.964969 0.931183  0.947488
+     scabies   0.871973 0.939130  0.903279
