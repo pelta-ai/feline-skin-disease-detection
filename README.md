@@ -7,7 +7,7 @@ A mobile app that uses AI to detect skin diseases in cats from photos. Built wit
 ## Features
 
 - **AI-Powered Detection**: YOLOv8 for lesion detection + CNN for disease classification
-- **Disease Categories**: Acne, Flea Allergy, Lumps & Bumps, Healthy
+- **Disease Categories**: Demodicosis, Dermatitis, Flea Allergy, Fungus, Ringworm, Scabies
 - **User Accounts**: Firebase Authentication with email verification
 - **Scan History**: View recent diagnoses and track pet health over time
 
