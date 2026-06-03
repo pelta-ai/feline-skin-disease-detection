@@ -1,0 +1,35 @@
+EfficientNetV2-B0 Partially Fine-Tuned Feature Extraction
+======================================
+Backbone: EfficientNetV2-B0 (ImageNet pretrained, partially fine-tuned - last 20 layers unfrozen)
+Epochs: 25 | Seeds: 15 | LR: 1e-4
+
+Per-Seed Results:
+  Seed 1: accuracy=0.9026, macro_f1=0.8911
+  Seed 2: accuracy=0.8961, macro_f1=0.8819
+  Seed 3: accuracy=0.9156, macro_f1=0.9070
+  Seed 4: accuracy=0.9091, macro_f1=0.8989
+  Seed 5: accuracy=0.8961, macro_f1=0.8846
+  Seed 6: accuracy=0.8961, macro_f1=0.8817
+  Seed 7: accuracy=0.9091, macro_f1=0.8945
+  Seed 8: accuracy=0.8961, macro_f1=0.8819
+  Seed 9: accuracy=0.9091, macro_f1=0.8979
+ Seed 10: accuracy=0.8961, macro_f1=0.8817
+ Seed 11: accuracy=0.9156, macro_f1=0.9049
+ Seed 12: accuracy=0.9026, macro_f1=0.8916
+ Seed 13: accuracy=0.9091, macro_f1=0.8974
+ Seed 14: accuracy=0.9156, macro_f1=0.9038
+ Seed 15: accuracy=0.9026, macro_f1=0.8911
+
+Summary:
+  Accuracy: 0.9048 +/- 0.0076
+  Macro F1: 0.8927 +/- 0.0089
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class             Precision    Recall      F1
+    demodicosis       0.000000   0.000000   0.000000
+    dermatitis        0.000000   0.000000   0.000000
+    flea_allergy      0.000000   0.000000   0.000000
+    fungus            0.000000   0.000000   0.000000
+    ringworm          0.000000   0.000000   0.000000
+    scabies           0.000000   0.000000   0.000000

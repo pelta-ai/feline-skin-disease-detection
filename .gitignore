@@ -56,3 +56,14 @@ app.*.map.json
 
 # Large training data files (not needed for inference)
 *.npz
+
+# Images (stored in Supabase)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.webp
+*.tiff
+*.svg
+*.ico

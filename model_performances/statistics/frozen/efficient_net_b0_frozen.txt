@@ -1,0 +1,35 @@
+EfficientNet-B0 Frozen Feature Extraction
+======================================
+Backbone: EfficientNet-B0 (ImageNet pretrained, frozen)
+Epochs: 10 | Seeds: 15 | LR: 1e-3
+
+Per-Seed Results:
+  Seed 1: accuracy=0.9221, macro_f1=0.9177
+  Seed 2: accuracy=0.9286, macro_f1=0.9209
+  Seed 3: accuracy=0.9286, macro_f1=0.9214
+  Seed 4: accuracy=0.9221, macro_f1=0.9146
+  Seed 5: accuracy=0.9221, macro_f1=0.9098
+  Seed 6: accuracy=0.9156, macro_f1=0.9074
+  Seed 7: accuracy=0.9221, macro_f1=0.9133
+  Seed 8: accuracy=0.9221, macro_f1=0.9125
+  Seed 9: accuracy=0.9286, macro_f1=0.9228
+ Seed 10: accuracy=0.9286, macro_f1=0.9202
+ Seed 11: accuracy=0.9091, macro_f1=0.8967
+ Seed 12: accuracy=0.9286, macro_f1=0.9233
+ Seed 13: accuracy=0.9286, macro_f1=0.9201
+ Seed 14: accuracy=0.9221, macro_f1=0.9148
+ Seed 15: accuracy=0.9221, macro_f1=0.9117
+  
+Summary:
+  Accuracy: 0.9234 +/- 0.0056
+  Macro F1: 0.9151 +/- 0.0071
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class             Precision    Recall      F1
+    demodicosis       1.000000   1.000000   1.000000
+    dermatitis        0.963999   0.722807   0.824886
+    flea_allergy      0.899095   0.925926   0.911817
+    fungus            0.933393   0.997101   0.963819
+    ringworm          0.907379   0.933333   0.919627
+    scabies           0.850338   0.895652   0.870889

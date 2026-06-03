@@ -1,0 +1,35 @@
+MobileNetV3-Small Partially Fine-Tuned Feature Extraction
+======================================
+Backbone: MobileNetV3-Small (ImageNet pretrained, partially fine-tuned - last 25 layers unfrozen)
+Epochs: 25 | Seeds: 15 | LR: 1e-4
+
+Per-Seed Results:
+  Seed 1: accuracy=0.9156, macro_f1=0.9070
+  Seed 2: accuracy=0.9286, macro_f1=0.9219
+  Seed 3: accuracy=0.9481, macro_f1=0.9433
+  Seed 4: accuracy=0.9026, macro_f1=0.8917
+  Seed 5: accuracy=0.9286, macro_f1=0.9230
+  Seed 6: accuracy=0.9286, macro_f1=0.9209
+  Seed 7: accuracy=0.9091, macro_f1=0.8998
+  Seed 8: accuracy=0.9156, macro_f1=0.9049
+  Seed 9: accuracy=0.9091, macro_f1=0.8923
+ Seed 10: accuracy=0.9351, macro_f1=0.9293
+ Seed 11: accuracy=0.9351, macro_f1=0.9294
+ Seed 12: accuracy=0.9221, macro_f1=0.9141
+ Seed 13: accuracy=0.9156, macro_f1=0.9075
+ Seed 14: accuracy=0.9156, macro_f1=0.9046
+ Seed 15: accuracy=0.9221, macro_f1=0.9162
+
+Summary:
+  Accuracy: 0.9221 +/- 0.0120
+  Macro F1: 0.9137 +/- 0.0145
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class             Precision    Recall      F1
+    demodicosis       0.000000   0.000000   0.000000
+    dermatitis        0.000000   0.000000   0.000000
+    flea_allergy      0.000000   0.000000   0.000000
+    fungus            0.000000   0.000000   0.000000
+    ringworm          0.000000   0.000000   0.000000
+    scabies           0.000000   0.000000   0.000000

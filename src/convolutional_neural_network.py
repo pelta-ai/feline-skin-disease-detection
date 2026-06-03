@@ -64,7 +64,7 @@ class ConvolutionNeuralNetwork:
         return model
 
     def load_and_preprocess(self):
-        from data_manipulation.prepare_cnn_dataset import load_data  # avoid circular import
+        from src.data_manipulation.prepare_cnn_dataset import load_data  # avoid circular import
         data, labels = load_data()
         X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.1)
 
