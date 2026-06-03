@@ -68,6 +68,5 @@ def sort_images(csv_path: str):
 
     print(f"Done. {moved} sorted, {skipped} skipped.")
 
-
 if __name__ == "__main__":
     sort_images(os.path.join(constants.DATA_PATH, "val_classes.csv"))

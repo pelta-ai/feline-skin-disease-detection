@@ -62,6 +62,7 @@ class BaseClassifier(ABC):
             batch_size=self.batch_size,
             shuffle=False,
         )
+
         self.class_names = self.train_ds.class_names
         self.num_classes = len(self.class_names)
 
@@ -179,3 +180,4 @@ class BaseClassifier(ABC):
         fig, ax = plt.subplots(figsize=(10, 10))
         display.plot(ax=ax, cmap=plt.cm.Blues)
         plt.show()
+                

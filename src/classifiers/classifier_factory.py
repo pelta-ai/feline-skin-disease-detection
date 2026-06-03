@@ -11,13 +11,13 @@ from .convnext_tiny_classifier import ConvNeXtTinyClassifier
 
 class ClassifierFactory:
     _registry = {
-        "mobilenet_v2": MobileNetV2Classifier,
-        "mobilenet_v3_small": MobileNetV3SmallClassifier,
+        "mobilenetv2": MobileNetV2Classifier,
+        "mobilenetv3small": MobileNetV3SmallClassifier,
         "resnet50": ResNet50Classifier,
-        "efficientnet_b0": EfficientNetB0Classifier,
-        "efficientnet_v2_b0": EfficientNetV2B0Classifier,
-        "nasnet_mobile": NASNetMobileClassifier,
-        "convnext_tiny": ConvNeXtTinyClassifier,
+        "efficientnetb0": EfficientNetB0Classifier,
+        "efficientnetv2b0": EfficientNetV2B0Classifier,
+        "nasnetmobile": NASNetMobileClassifier,
+        "convnexttiny": ConvNeXtTinyClassifier,
     }
 
     @classmethod
