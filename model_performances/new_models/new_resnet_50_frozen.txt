@@ -1,0 +1,26 @@
+ResNet-50 Frozen Feature Extraction (New)
+======================================
+Backbone: ResNet-50 (ImageNet pretrained, frozen)
+Epochs: Adj | Seeds: 15 | LR: 1e-3
+
+Per-Seed Results:
+  Seed 1: accuracy=0.8693, macro_f1=0.8544
+  Seed 2: accuracy=0.8410, macro_f1=0.8223
+  Seed 3: accuracy=0.8728, macro_f1=0.8667
+  Seed 4: accuracy=0.8410, macro_f1=0.8387
+  Seed 5: accuracy=0.8587, macro_f1=0.8317
+  
+Summary:
+  Accuracy: 0.85656 +/- 0.0151
+  Macro F1: 0.84276 +/- 0.0178
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class                    Precision    Recall        F1
+    allergic_dermatitis      0.901475    0.747368    0.815481
+    ear_mites                0.896821    0.722222    0.796764
+    eosinophilic_granuloma   0.897386    0.950000    0.921891
+    feline_acne              0.687433    1.000000    0.811732
+    fungal                   0.686460    0.761905    0.717188
+    mange                    0.890494    0.893103    0.891709
+    other                    0.943572    0.946835    0.944584
