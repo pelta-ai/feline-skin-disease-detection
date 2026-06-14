@@ -6,6 +6,7 @@ import keras
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants
+from utils.get_class_names import get_class_names
 
 
 # Models are expensive to load (seconds each), so cache them across calls keyed
@@ -31,6 +32,7 @@ def generate_final_image(image_path, model_paths=None, output_dir=constants.TEMP
         model_paths = constants.ENSEMBLE_MODEL_PATHS
 
     model_paths_full = [_abs(p) for p in model_paths]
+    print(model_paths_full)
     output_dir_full = _abs(output_dir)
     image_path = _abs(image_path)
 
@@ -62,7 +64,7 @@ def generate_final_image(image_path, model_paths=None, output_dir=constants.TEMP
     avg_probs = np.mean([np.array(m(arr, training=False)) for m in models], axis=0)
 
     top = int(np.argmax(avg_probs[0]))
-    final_class = constants.CLASS_NAMES[top]
+    final_class = get_class_names()[top]
     confidence = float(avg_probs[0][top])
     print(final_class, confidence)
 
@@ -82,4 +84,4 @@ def generate_final_image(image_path, model_paths=None, output_dir=constants.TEMP
 
 
 if __name__ == "__main__":
-    generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_dermatitis_1.jpg')
+    generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_2.jpg')

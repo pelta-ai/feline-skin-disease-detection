@@ -12,7 +12,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 # Config
-architectures = ["new_resnet50"]
+architectures = ["new_efficientnetb0"]
 approaches = ["frozen"]
 seeds = range(1, 6)  # Seeds 1 through 15
 

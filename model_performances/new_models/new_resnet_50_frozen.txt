@@ -24,3 +24,5 @@ Detailed Evaluation (Overall):
     fungal                   0.686460    0.761905    0.717188
     mange                    0.890494    0.893103    0.891709
     other                    0.943572    0.946835    0.944584
+
+    

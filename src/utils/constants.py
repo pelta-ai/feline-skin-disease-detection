@@ -22,7 +22,7 @@ YOLO_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_yolo.pt")
 ENSEMBLE_SEEDS = [1, 2, 3, 4, 5]
 ENSEMBLE_MODEL_PATHS = [
     os.path.join(TRAINED_MODELS_PATH, f"{arch}_frozen_seed_{seed}.keras")
-    for arch in ("efficientnetb0", "resnet50")
+    for arch in ("new_resnet50", "new_efficientnetb0")
     for seed in ENSEMBLE_SEEDS
 ]
 
