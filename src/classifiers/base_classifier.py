@@ -17,10 +17,11 @@ from keras import layers, models
 from sklearn.metrics import ConfusionMatrixDisplay
 
 from ..utils import constants
+from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
 
 
 class BaseClassifier(ABC):
-    def __init__(self, data_path=constants.DATA_IMAGES_PATH, img_size=constants.IMG_SIZE,
+    def __init__(self, data_path=constants.DATA_PATH, img_size=constants.IMG_SIZE,
                  batch_size=constants.BATCH, base_seed=42):
         self.data_path = data_path
         self.img_size = img_size
@@ -103,13 +104,24 @@ class BaseClassifier(ABC):
 
     # ── training ────────────────────────────────────────────────────
     def train_one_run(self, seed, save_name, save_path=constants.TRAINED_MODELS_PATH,
-                      epochs=10, **build_kwargs):
+                      epochs=50, **build_kwargs):
         if self.train_ds is None or self.val_ds is None:
             raise ValueError("Ensure that train_ds and val_ds are already built.")
+        
+        counts = count_classes_from_folder_structure()
+        total, k = sum(counts.values()), len(counts)
+        class_weight = {i: max(total/(k*counts[name]), 1.0)
+                for i, name in enumerate(self.class_names)}
 
         self._set_all_seeds(seed)
         model = self._build_model(**build_kwargs)
-        model.fit(self.train_ds, validation_data=self.val_ds, epochs=epochs, verbose=0)
+        callbacks = [
+            keras.callbacks.EarlyStopping(monitor="val_loss", patience=10,
+                                        restore_best_weights=True),
+            keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                            patience=4, min_lr=1e-6),
+        ]
+        history = model.fit(self.train_ds, validation_data=self.val_ds, epochs=epochs, verbose=0, class_weight=class_weight, callbacks=callbacks)
 
         if save_name is not None:
             if not save_name.endswith(".keras"):
