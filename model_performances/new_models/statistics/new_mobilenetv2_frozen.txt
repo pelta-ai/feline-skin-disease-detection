@@ -1,0 +1,26 @@
+MobileNetV2 Frozen Feature Extraction (New)
+======================================
+Backbone: MobileNetV2 (ImageNet pretrained, frozen)
+Epochs: Adj | Seeds: 5 | LR: 1e-3
+
+Per-Seed Results:
+  Seed 1: accuracy=0.8021, macro_f1=0.7878
+  Seed 2: accuracy=0.8375, macro_f1=0.8200
+  Seed 3: accuracy=0.7880, macro_f1=0.7714
+  Seed 4: accuracy=0.7774, macro_f1=0.7590
+  Seed 5: accuracy=0.8198, macro_f1=0.8114
+  
+Summary:
+  Accuracy: 0.8049 +/- 0.0241
+  Macro F1: 0.7899 +/- 0.0258
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class                    Precision    Recall        F1
+    allergic_dermatitis      0.879423    0.666667    0.755823
+    ear_mites                0.843191    0.688889    0.749542
+    eosinophilic_granuloma   0.926667    0.825000    0.856869
+    feline_acne              0.682969    0.846154    0.751086
+    fungal                   0.533727    0.776190    0.630198
+    mange                    0.927714    0.827586    0.872641
+    other                    0.907727    0.918987    0.913195

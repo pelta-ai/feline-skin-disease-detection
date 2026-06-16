@@ -12,7 +12,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 # Config
-architectures = ["new_efficientnetb0"]
+architectures = ["new_mobilenetv2"]
 approaches = ["frozen"]
 seeds = range(1, 6)  # Seeds 1 through 15
 
