@@ -28,7 +28,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(SRC_DIR))
 
-from src.generate_final_image import generate_final_image
+from src.generate_final_image import generate_final_image, warm_up
 import src.utils.constants as constants
 
 app = Flask(__name__)
@@ -283,6 +283,13 @@ if __name__ == "__main__":
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     host = os.environ.get('FLASK_HOST', '0.0.0.0')  # 0.0.0.0 for containers
     port = int(os.environ.get('FLASK_PORT', '5000'))
+
+    # Load the CNN ensemble now so the first /generate-ai-predictions request
+    # isn't slowed by a cold model load. Under gunicorn, use --preload (or call
+    # warm_up() from a worker hook) to get the same benefit per worker.
+    app.logger.info("Preloading CNN ensemble...")
+    warm_up()
+    app.logger.info("Ensemble loaded.")
 
     app.logger.info(f"Starting server on {host}:{port} (debug={debug_mode})")
     app.run(host=host, port=port, debug=debug_mode)
