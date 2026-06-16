@@ -20,14 +20,20 @@ class ClassifierFactory:
         "convnexttiny": ConvNeXtTinyClassifier,
     }
 
+    @staticmethod
+    def _normalize(name: str) -> str:
+        """Allow underscore-separated names (e.g. 'mobilenet_v2') to resolve."""
+        return name.replace("_", "").lower()
+
     @classmethod
     def create(cls, backbone_name: str, **kwargs):
-        if backbone_name not in cls._registry:
+        key = cls._normalize(backbone_name)
+        if key not in cls._registry:
             available = ", ".join(sorted(cls._registry))
             raise ValueError(
                 f"Unknown backbone '{backbone_name}'. Available: {available}"
             )
-        return cls._registry[backbone_name](**kwargs)
+        return cls._registry[key](**kwargs)
 
     @classmethod
     def register(cls, name: str, classifier_cls):
