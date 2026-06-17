@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/drawer.dart';
-import 'package:final_design/utils/aws_s3_api.dart';
+import 'package:final_design/utils/backend_api.dart';
 
 class RecentDiagnosisScreen extends StatelessWidget {
   const RecentDiagnosisScreen({super.key});
@@ -57,7 +57,7 @@ class RecentDiagnosis extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: S3ApiService.folderExists("$currentUser/$todayDate/"),
+      future: BackendApiService.folderExists("$currentUser/$todayDate/"),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -69,7 +69,7 @@ class RecentDiagnosis extends StatelessWidget {
 
         // If folder exists, fetch object paths
         return FutureBuilder<List<String>>(
-          future: S3ApiService.listObjectPaths(
+          future: BackendApiService.listObjectPaths(
               prefix: "$currentUser/$todayDate/annotated_images/"),
           builder: (context, listSnapshot) {
             if (listSnapshot.connectionState == ConnectionState.waiting) {
@@ -104,7 +104,7 @@ class RecentDiagnosis extends StatelessWidget {
                             child: Row(
                               children: paths.map((path) {
                                 return FutureBuilder<String?>(
-                                  future: S3ApiService.getFileUrl(path),
+                                  future: BackendApiService.getFileUrl(path),
                                   builder: (context, urlSnapshot) {
                                     if (urlSnapshot.connectionState ==
                                         ConnectionState.waiting) {

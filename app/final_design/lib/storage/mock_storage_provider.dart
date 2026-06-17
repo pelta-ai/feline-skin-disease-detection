@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 /// Mock implementation of AppStorageProvider for testing and development.
 ///
-/// Stores files locally on the device instead of S3.
+/// Stores files locally on the device instead of the backend.
 /// Data persists across app restarts (stored in app's documents directory).
 ///
 /// CLEARING MOCK DATA:
@@ -187,7 +187,7 @@ class MockStorageProvider implements AppStorageProvider {
   Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required String storageKey,
   }) async {
     // In mock mode, return fake predictions
     // This simulates the AI backend without actually running models
@@ -199,7 +199,7 @@ class MockStorageProvider implements AppStorageProvider {
 
     // Get the uploaded image path as the "annotated" URL
     final baseDir = await _getBaseDir();
-    final imagePath = '${baseDir.path}/$s3Key';
+    final imagePath = '${baseDir.path}/$storageKey';
 
     return {
       'label': randomLabel,

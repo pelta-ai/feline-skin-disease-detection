@@ -162,7 +162,7 @@ class _HomeState extends State<Home> {
       final result = await storage.generateAIPredictions(
         userId: userId,
         fileName: fileName,
-        s3Key: storageKey,
+        storageKey: storageKey,
       );
 
       if (!mounted || result == null) return;

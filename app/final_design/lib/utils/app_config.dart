@@ -68,9 +68,9 @@ class AppConfig {
   static const String _devBackendUrl = "http://localhost:5000";
 
   /// Production backend URL (Hugging Face Spaces or other hosting)
-  /// TODO: Update this URL after deploying to Hugging Face Spaces
+  /// Space: pelta-ai/pelta-ai-backend (see .github/workflows/deploy-to-hf.yml)
   static const String _productionBackendUrl =
-      "https://YOUR_USERNAME-feline-skin-detection.hf.space";
+      "https://pelta-ai-pelta-ai-backend.hf.space";
 
   /// Returns the backend URL based on current environment
   static String get backendUrl {

@@ -57,7 +57,7 @@ abstract class AppStorageProvider {
 
   /// Get a URL to access a file
   ///
-  /// For S3: Returns a pre-signed URL
+  /// For the real backend: Returns a pre-signed URL
   /// For mock: Returns a local file path
   Future<String?> getFileUrl(String path);
 
@@ -80,7 +80,7 @@ abstract class AppStorageProvider {
   Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required String storageKey,
   });
 
   /// Get today's date from the backend (for consistency)

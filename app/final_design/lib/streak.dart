@@ -1,6 +1,6 @@
 import 'dart:developer';
 
-import 'package:final_design/utils/aws_s3_api.dart';
+import 'package:final_design/utils/backend_api.dart';
 import 'package:final_design/streak_data.dart';
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/constants.dart';
@@ -60,7 +60,7 @@ class Streak extends StatelessWidget {
   Streak({super.key});
 
   Future<void> updateStreak() async {
-    if (await S3ApiService.folderExists("$currentUser/$todayDate/")) {
+    if (await BackendApiService.folderExists("$currentUser/$todayDate/")) {
       streakData.setStatus(DateTime.now(), "done");
       log("Done");
     }

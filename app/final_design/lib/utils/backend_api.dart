@@ -23,11 +23,16 @@ extension MultipartRequestExtension on http.MultipartRequest {
   }
 }
 
-class S3ApiService {
+/// HTTP client for the Pelta backend.
+///
+/// The backend owns all storage (Supabase by default; S3 is opt-in via the
+/// backend's STORAGE_PROVIDER env var). This client is storage-agnostic — it
+/// only speaks the backend's HTTP API and never talks to a cloud bucket directly.
+class BackendApiService {
   /// Backend URL configured via AppConfig
   static String get baseUrl => AppConfig.backendUrl;
 
-  // List S3 objects under a prefix
+  // List stored objects under a prefix
   static Future<List<String>> listObjectPaths({String prefix = ''}) async {
     final uri = Uri.parse('$baseUrl/list-objects?prefix=$prefix');
     final response = await http.get(uri, headers: _defaultHeaders());
@@ -136,7 +141,7 @@ class S3ApiService {
     return null;
   }
 
-  static Future<void> triggerDownloadFromS3(
+  static Future<void> triggerDownloadFromStorage(
       {required File pickedFile, required String userId}) async {
     try {
       final fullPath = pickedFile.path;
@@ -147,24 +152,26 @@ class S3ApiService {
         log('Failed to fetch date from backend');
         return;
       }
-      final s3Key = '$userId/$today/images/$fileName';
+      final storageKey = '$userId/$today/images/$fileName';
 
       final uri = Uri.parse('$baseUrl/download-file');
+      // Note: 's3_key' is the backend's wire field name (kept for API
+      // compatibility); the value is just the storage path.
       final request = http.MultipartRequest('POST', uri)
         ..fields['user_id'] = userId
         ..fields['file_name'] = fileName
-        ..fields['s3_key'] = s3Key;
+        ..fields['s3_key'] = storageKey;
 
       final response = await request.withDefaultHeaders().send();
       final body = await response.stream.bytesToString();
 
       if (response.statusCode == 200) {
-        log('Download-from-S3 triggered OK: $body');
+        log('Download-from-storage triggered OK: $body');
       } else {
-        log('Download-from-S3 failed: ${response.statusCode} — $body');
+        log('Download-from-storage failed: ${response.statusCode} — $body');
       }
     } catch (e) {
-      log('Error calling download-from-s3: $e');
+      log('Error calling download-from-storage: $e');
     }
   }
 
@@ -187,13 +194,15 @@ class S3ApiService {
   static Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required String storageKey,
   }) async {
     final uri = Uri.parse("$baseUrl/generate-ai-predictions");
+    // Note: 's3_key' is the backend's wire field name (kept for API
+    // compatibility); the value is just the storage path.
     final request = http.MultipartRequest('POST', uri)
       ..fields['user_id'] = userId
       ..fields['file_name'] = fileName
-      ..fields['s3_key'] = s3Key;
+      ..fields['s3_key'] = storageKey;
 
     final response = await request.withDefaultHeaders().send();
     final body = await response.stream.bytesToString();
