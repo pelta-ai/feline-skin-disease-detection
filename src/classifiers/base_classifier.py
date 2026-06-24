@@ -15,6 +15,7 @@ import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
 from sklearn.metrics import ConfusionMatrixDisplay
+import ml_insights as mli
 
 from ..utils import constants
 from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
@@ -170,9 +171,14 @@ class BaseClassifier(ABC):
         if self.test_ds is None:
             raise ValueError("Ensure that test_ds is already built.")
 
+        #y_true is the true label, y_pred is the predicted label, y_prob is the predicted probabilities
         y_true, y_pred, y_prob = self._collect_y_true_y_pred_probs(model, self.test_ds)
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
+
+        confidence = y_prob.max(axis=1)
+        correct = (y_pred == y_true).astype(int)
+        rd = mli.plot_reliability_diagram(correct, confidence, show_histogram=True)
 
         if display_confusion_matrix == True:
             self._display_confusion_matrix(y_true=y_true, y_pred=y_pred)
@@ -184,6 +190,7 @@ class BaseClassifier(ABC):
             "per_class_recall": rec,
             "per_class_f1": f1,
             "confusion_matrix": cm,
+            "reliability_diagram": rd,
         }
 
     def _display_confusion_matrix(self, y_true, y_pred):
