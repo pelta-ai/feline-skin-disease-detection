@@ -192,4 +192,3 @@ class BaseClassifier(ABC):
         fig, ax = plt.subplots(figsize=(10, 10))
         display.plot(ax=ax, cmap=plt.cm.Blues)
         plt.show()
-                

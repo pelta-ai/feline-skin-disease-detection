@@ -1,0 +1,26 @@
+EfficientNet-B0 Frozen Feature Extraction (New)
+======================================
+Backbone: EfficientNet-B0 (ImageNet pretrained, frozen)
+Epochs: Adj | Seeds: 5 | LR: 1e-3
+
+Per-Seed Results:
+  Seed 1: accuracy=0.8233, macro_f1=0.7882
+  Seed 2: accuracy=0.8163, macro_f1=0.8122
+  Seed 3: accuracy=0.8375, macro_f1=0.8222
+  Seed 4: accuracy=0.8163, macro_f1=0.7961
+  Seed 5: accuracy=0.7915, macro_f1=0.7660
+  
+Summary:
+  Accuracy: 0.8170 +/- 0.0166
+  Macro F1: 0.7969 +/- 0.0218
+
+Detailed Evaluation (Overall):
+  Per-Class Metrics:
+    Class                    Precision    Recall        F1
+    allergic_dermatitis      0.900362    0.698246    0.786431
+    ear_mites                0.646739    0.833333    0.728223
+    eosinophilic_granuloma   1.000000    0.687500    0.806857
+    feline_acne              0.710719    0.969231    0.819007
+    fungal                   0.585341    0.709524    0.640390
+    mange                    0.873998    0.875862    0.874391
+    other                    0.933407    0.913924    0.923338

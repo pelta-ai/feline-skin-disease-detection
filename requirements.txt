@@ -17,6 +17,7 @@ ultralytics>=8.0.0
 # Machine Learning - CNN
 tensorflow>=2.12.0
 keras>=2.12.0
+protobuf<6             # TF 2.20 bundles protobuf 5.x gencode; protobuf 6.x triggers mismatch warnings
 scikit-learn>=1.2.0
 joblib>=1.2.0
 
