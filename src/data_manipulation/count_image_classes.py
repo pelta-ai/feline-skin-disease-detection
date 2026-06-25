@@ -53,4 +53,5 @@ def count_all():
         for cat, count in counts.items():
             print(f"  {cat}: {count}")
 
-print(count_classes_from_folder_structure())
+if __name__ == "__main__":
+    print(count_classes_from_folder_structure())

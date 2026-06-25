@@ -12,9 +12,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 # Config
-architectures = ["convnext_tiny", "efficientnet_b0", "efficientnet_v2_b0", "mobilenet_v2", "mobilenet_v3_small", "nasnet_mobile", "resnet50"]
-approaches = ["finetuned"]
-seeds = range(1, 16)  # Seeds 1 through 15
+architectures = ["new_mobilenetv2"]
+approaches = ["frozen"]
+seeds = range(1, 6)  # Seeds 1 through 15
 
 for arch in architectures:
     for approach in approaches:
@@ -26,13 +26,13 @@ for arch in architectures:
             # Matches format: resnet50_finetuned_seed2.keras
             # Note: strip underscores from arch name if your filenames don't use them (e.g., resnet50)
             clean_arch = arch.replace("_", "") 
-            filename = f"{clean_arch}_{approach}_seed_{seed}.keras"
+            filename = f"{arch}_{approach}_seed_{seed}.keras"
             model_path = os.path.join(constants.TRAINED_MODELS_PATH, filename)
             
             if not os.path.exists(model_path):
                 continue
 
-            cnn = ClassifierFactory.create(arch)
+            cnn = ClassifierFactory.create("resnet50")
             cnn.make_sub_datasets()
             result = cnn.evaluate(model_path=model_path, display_confusion_matrix=False)
             
