@@ -2,7 +2,6 @@ import os, sys, gc
 import numpy as np
 from PIL import UnidentifiedImageError
 import keras
-import tensorflow as tf
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
