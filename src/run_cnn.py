@@ -23,16 +23,14 @@ for arch in architectures:
         print(f"\n--- Processing: {arch} ({approach}) ---")
         
         for seed in seeds:
-            # Matches format: resnet50_finetuned_seed2.keras
-            # Note: strip underscores from arch name if your filenames don't use them (e.g., resnet50)
-            clean_arch = arch.replace("_", "") 
             filename = f"{arch}_{approach}_seed_{seed}.keras"
             model_path = os.path.join(constants.TRAINED_MODELS_PATH, filename)
             
             if not os.path.exists(model_path):
                 continue
 
-            cnn = ClassifierFactory.create("resnet50")
+            # Strip the "new_" filename label to get the backbone key the factory expects.
+            cnn = ClassifierFactory.create(arch.replace("new_", ""))
             cnn.make_sub_datasets()
             result = cnn.evaluate(model_path=model_path, display_confusion_matrix=False)
             
