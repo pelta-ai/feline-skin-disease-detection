@@ -13,7 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 # Config
 architectures = ["convnext_tiny", "efficientnet_b0", "efficientnet_v2_b0", "mobilenet_v2", "mobilenet_v3_small", "nasnet_mobile", "resnet50"]
-approaches = ["finetuned"]
+approaches = ["frozen", "finetuned"]
 seeds = range(1, 16)  # Seeds 1 through 15
 
 for arch in architectures:
@@ -34,7 +34,7 @@ for arch in architectures:
 
             cnn = ClassifierFactory.create(arch)
             cnn.make_sub_datasets()
-            result = cnn.evaluate(model_path=model_path, display_confusion_matrix=False)
+            result = cnn.calibrate_and_evaluate(model_path=model_path, display_confusion_matrix=False)
             
             # Collect data
             all_cms.append(result['confusion_matrix'])
@@ -62,5 +62,5 @@ for arch in architectures:
                     xticklabels=cnn.class_names, yticklabels=cnn.class_names)
         plt.title(f'Overall CM: {arch} - {approach}\n(Mean of {len(all_cms)} seeds)')
         plt.tight_layout()
-        plt.savefig(f"{arch}_{approach}_overall_cm.png")
+        #plt.savefig(f"{arch}_{approach}_overall_cm.png")
         plt.show()

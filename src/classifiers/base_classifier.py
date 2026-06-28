@@ -16,6 +16,7 @@ from tensorflow import keras
 from keras import layers, models
 from sklearn.metrics import ConfusionMatrixDisplay
 import ml_insights as mli
+from scipy.optimize import minimize_scalar
 
 from ..utils import constants
 from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
@@ -161,12 +162,16 @@ class BaseClassifier(ABC):
         acc = float(true_positives.sum() / (confusion_matrix.sum() + eps))
         macro_f1 = float(np.mean(f1))
         return acc, precision, recall, f1, macro_f1
+    
+    def _display_confusion_matrix(self, y_true, y_pred):
+        cm = self._confusion_matrix(y_true, y_pred)
+        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        display.plot(ax=ax, cmap=plt.cm.Blues)
+        plt.show()
 
-    def evaluate(self, model=None, model_path=None, display_confusion_matrix=False):
-        if model is None:
-            if model_path is None:
-                raise ValueError("Provide model or model_path.")
-            model = keras.models.load_model(model_path)
+    def calibrate_and_evaluate(self, model=None, model_path=None, show_plots=False):
+        model = self._check_model_exists(model=model, model_path=model_path)
 
         if self.test_ds is None:
             raise ValueError("Ensure that test_ds is already built.")
@@ -176,12 +181,21 @@ class BaseClassifier(ABC):
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
 
-        confidence = y_prob.max(axis=1)
         correct = (y_pred == y_true).astype(int)
-        rd = mli.plot_reliability_diagram(correct, confidence, show_histogram=True)
 
-        if display_confusion_matrix == True:
+        ece_before_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob)
+
+        T = self.fit_temperature(model=model)
+        y_prob_cal = self.scale(y_prob, T)
+
+        ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
+
+        rd_before_calib = None
+        rd_after_calib = None
+        if show_plots == True:
             self._display_confusion_matrix(y_true=y_true, y_pred=y_pred)
+            rd_before_calib = mli.plot_reliability_diagram(correct, y_prob.max(1), show_histogram=True)
+            rd_after_calib = mli.plot_reliability_diagram(correct, y_prob_cal.max(1), show_histogram=True)
 
         return {
             "accuracy": acc,
@@ -190,13 +204,59 @@ class BaseClassifier(ABC):
             "per_class_recall": rec,
             "per_class_f1": f1,
             "confusion_matrix": cm,
-            "reliability_diagram": rd,
+            "reliability_diagram_before_calibration": rd_before_calib,
+            "expected_calibration_error_before_calibration": ece_before_calib,
+            "reliability_diagram_after_calibration": rd_after_calib,
+            "expected_calibration_error_after_calibration": ece_after_calib,
         }
+    
+    # ── calibration ──────────────────────────────────────────────────
+    @staticmethod
+    def _to_int(y):
+        y = np.asarray(y)
+        return y.argmax(1) if (y.ndim > 1 and y.shape[1] > 1) else y.ravel().astype(int)
+    
+    @staticmethod
+    def _scale(probs, T):
+        z = np.log(np.clip(probs, 1e-12, 1.0)) / T
+        z -= z.max(1, keepdims=True)
+        e = np.exp(z)
+        return e / e.sum(1, keepdims=True)
 
-    def _display_confusion_matrix(self, y_true, y_pred):
-        cm = self._confusion_matrix(y_true, y_pred)
-        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
-        fig, ax = plt.subplots(figsize=(10, 10))
-        display.plot(ax=ax, cmap=plt.cm.Blues)
-        plt.show()
-                
+    def fit_temperature(self, model=None, model_path=None):
+        model = self._check_model_exists(model=model, model_path=model_path)
+
+        if self.val_ds is None:
+            raise ValueError("Ensure that test_ds is already built.")
+        
+        y_true_val, y_pred, y_prob_val = self._collect_y_true_y_pred_probs(model, self.val_ds)
+        y = self._to_int(y_true_val)
+        def nll(T):
+            p = self._scale(y_prob_val, T)
+            true_p = p[np.arange(len(y)), y]
+            return -np.mean(np.log(np.clip(true_p, 1e-12, 1.0)))
+        
+        return float(minimize_scalar(nll, bounds=(0.05, 10.0), method="bounded").x)
+    
+    def expected_calibration_error(self, y_true, y_prob, n_bins=15):
+        y = self._to_int(y_true)
+        conf = y_prob.max(1)
+        correct = (y_prob.argmax(1) == y).astype(float)
+        edges = np.linspace(0.0, 1.0, n_bins + 1)
+        ece, n = 0.0, len(conf)
+
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            m = (conf > lo) & (conf <= hi)
+            if m.sum():
+                ece += (m.sum() / n) * abs(conf[m].mean() - correct[m].mean())
+
+        return ece
+    
+    # ── extras ──────────────────────────────────────────────────
+    def _check_model_exists(self, model=None, model_path=None):
+        if model is None:
+            if model_path is None:
+                raise ValueError("Provide model or model_path.")
+            model = keras.models.load_model(model_path)
+
+        return model
