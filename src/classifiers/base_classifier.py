@@ -186,7 +186,7 @@ class BaseClassifier(ABC):
         ece_before_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob)
 
         T = self.fit_temperature(model=model)
-        y_prob_cal = self.scale(y_prob, T)
+        y_prob_cal = self._scale(y_prob, T)
 
         ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
 

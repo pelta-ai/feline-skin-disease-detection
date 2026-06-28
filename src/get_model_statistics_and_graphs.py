@@ -18,7 +18,7 @@ seeds = range(1, 16)  # Seeds 1 through 15
 
 for arch in architectures:
     for approach in approaches:
-        all_cms, all_ps, all_rs, all_fs = [], [], [], []
+        all_cms, all_ps, all_rs, all_fs, all_rds_before, all_eces_before, all_rds_after, all_eces_after = [], [], [], [], [], [], [], []
         
         print(f"\n--- Processing: {arch} ({approach}) ---")
         
@@ -34,25 +34,31 @@ for arch in architectures:
 
             cnn = ClassifierFactory.create(arch)
             cnn.make_sub_datasets()
-            result = cnn.calibrate_and_evaluate(model_path=model_path, display_confusion_matrix=False)
+            result = cnn.calibrate_and_evaluate(model_path=model_path, show_plots=False)
             
             # Collect data
             all_cms.append(result['confusion_matrix'])
             all_ps.append(result['per_class_precision'])
             all_rs.append(result['per_class_recall'])
             all_fs.append(result['per_class_f1'])
+            all_rds_before.append(result['reliability_diagram_before_calibration'])
+            all_eces_before.append(result['expected_calibration_error_before_calibration'])
+            all_rds_after.append(result['reliability_diagram_after_calibration'])
+            all_eces_after.append(result['expected_calibration_error_after_calibration'])
 
         if not all_cms:
             continue
 
         # 1. Aggregate
         mean_cm = np.mean(all_cms, axis=0)
-        avg_p, avg_r, avg_f1 = np.mean(all_ps, axis=0), np.mean(all_rs, axis=0), np.mean(all_fs, axis=0)
+        avg_p, avg_r, avg_f1, avg_ece_before, avg_ece_after = np.mean(all_ps, axis=0), np.mean(all_rs, axis=0), np.mean(all_fs, axis=0), np.mean(all_eces_before), np.mean(all_eces_after)
 
         # 2. Metrics Table
         summary_df = pd.DataFrame({
             'Class': cnn.class_names,
-            'Precision': avg_p, 'Recall': avg_r, 'F1-Score': avg_f1
+            'Precision': avg_p, 'Recall': avg_r, 'F1-Score': avg_f1,
+            'Expected Calibration Error Before Calibration': avg_ece_before,
+            'Expected Calibration Error After Calibration': avg_ece_after,
         })
         print(summary_df.to_string(index=False))
 
