@@ -163,11 +163,17 @@ class BaseClassifier(ABC):
         macro_f1 = float(np.mean(f1))
         return acc, precision, recall, f1, macro_f1
     
-    def _display_confusion_matrix(self, y_true, y_pred):
-        cm = self._confusion_matrix(y_true, y_pred)
-        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
+    @staticmethod
+    def display_confusion_matrix(cm, class_names, title=None):
+        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
         fig, ax = plt.subplots(figsize=(10, 10))
-        display.plot(ax=ax, cmap=plt.cm.Blues)
+        values_format = '.1f' if np.asarray(cm).dtype.kind == 'f' else 'd'
+        display.plot(ax=ax, cmap=plt.cm.Blues, values_format=values_format)
+
+        if title:
+            ax.set_title(title)
+
+        plt.tight_layout()
         plt.show()
 
     def calibrate_and_evaluate(self, model=None, model_path=None, show_plots=False):
@@ -190,12 +196,12 @@ class BaseClassifier(ABC):
 
         ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
 
-        rd_before_calib = None
-        rd_after_calib = None
         if show_plots == True:
-            self._display_confusion_matrix(y_true=y_true, y_pred=y_pred)
+            BaseClassifier.display_confusion_matrix(y_true=y_true, y_pred=y_pred)
             rd_before_calib = mli.plot_reliability_diagram(correct, y_prob.max(1), show_histogram=True)
             rd_after_calib = mli.plot_reliability_diagram(correct, y_prob_cal.max(1), show_histogram=True)
+            BaseClassifier.display_reliability_diagram(rd_before_calib)
+            BaseClassifier.display_reliability_diagram(rd_after_calib)
 
         return {
             "accuracy": acc,
@@ -204,10 +210,11 @@ class BaseClassifier(ABC):
             "per_class_recall": rec,
             "per_class_f1": f1,
             "confusion_matrix": cm,
-            "reliability_diagram_before_calibration": rd_before_calib,
             "expected_calibration_error_before_calibration": ece_before_calib,
-            "reliability_diagram_after_calibration": rd_after_calib,
             "expected_calibration_error_after_calibration": ece_after_calib,
+            "y_true": y_true,
+            "y_prob": y_prob,
+            "y_prob_cal": y_prob_cal
         }
     
     # ── calibration ──────────────────────────────────────────────────
@@ -222,6 +229,20 @@ class BaseClassifier(ABC):
         z -= z.max(1, keepdims=True)
         e = np.exp(z)
         return e / e.sum(1, keepdims=True)
+    
+    @staticmethod
+    def display_reliability_diagram(rd, title=None):
+        if rd is None:
+            return
+        
+        fig = rd if hasattr(rd, "number") else plt.gcf()
+
+        if title:
+            fig.suptitle(title)
+            fig.tight_layout()
+
+        plt.figure(fig.number)
+        plt.show()
 
     def fit_temperature(self, model=None, model_path=None):
         model = self._check_model_exists(model=model, model_path=model_path)
