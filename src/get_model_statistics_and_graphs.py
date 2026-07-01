@@ -10,7 +10,6 @@ from src.utils import constants
 import os
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 import ml_insights as mli
 # Config
