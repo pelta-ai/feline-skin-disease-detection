@@ -33,3 +33,6 @@ Detailed Evaluation (Overall):
     fungus            0.933393   0.997101   0.963819
     ringworm          0.907379   0.933333   0.919627
     scabies           0.850338   0.895652   0.870889
+
+    ECE Before Calibration: 0.041472
+    ECE After Calibration: 0.03925
