@@ -27,12 +27,12 @@ Summary:
 Detailed Evaluation (Overall):
   Per-Class Metrics:
     Class             Precision    Recall      F1
-    demodicosis       0.000000   0.000000   0.000000
-    dermatitis        0.000000   0.000000   0.000000
-    flea_allergy      0.000000   0.000000   0.000000
-    fungus            0.000000   0.000000   0.000000
-    ringworm          0.000000   0.000000   0.000000
-    scabies           0.000000   0.000000   0.000000
+    demodicosis       1.000000   1.000000   1.000000
+    dermatitis        0.921673   0.621053   0.741610
+    flea_allergy      0.830707   0.923457   0.874275
+    fungus            0.988889   1.000000   0.994326
+    ringworm          0.906549   0.909677   0.907843
+    scabies           0.795992   0.886957   0.837970
 
-    ECE Before Calibration:
-    ECE After Calibration: 
+    ECE Before Calibration: 0.051154
+    ECE After Calibration: 0.049409
