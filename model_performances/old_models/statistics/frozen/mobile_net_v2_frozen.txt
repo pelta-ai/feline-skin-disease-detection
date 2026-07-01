@@ -34,5 +34,5 @@ Detailed Evaluation (Overall):
     ringworm          0.910943   0.922581   0.915364
     scabies           0.841138   0.892754   0.862986
 
-    ECE Before Calibration:
-    ECE After Calibration: 
+    ECE Before Calibration: 0.046457
+    ECE After Calibration: 0.051872
