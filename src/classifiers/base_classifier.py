@@ -214,7 +214,8 @@ class BaseClassifier(ABC):
             "expected_calibration_error_after_calibration": ece_after_calib,
             "y_true": y_true,
             "y_prob": y_prob,
-            "y_prob_cal": y_prob_cal
+            "y_prob_cal": y_prob_cal,
+            "temperature": T,
         }
     
     # ── calibration ──────────────────────────────────────────────────
