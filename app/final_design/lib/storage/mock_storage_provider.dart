@@ -187,7 +187,7 @@ class MockStorageProvider implements AppStorageProvider {
   Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required List<int> imageBytes,
   }) async {
     // In mock mode, return fake predictions
     // This simulates the AI backend without actually running models
@@ -197,13 +197,9 @@ class MockStorageProvider implements AppStorageProvider {
     final mockLabels = ['Healthy', 'Feline Acne', 'Flea Allergy', 'Lumps/Bumps'];
     final randomLabel = mockLabels[DateTime.now().millisecond % mockLabels.length];
 
-    // Get the uploaded image path as the "annotated" URL
-    final baseDir = await _getBaseDir();
-    final imagePath = '${baseDir.path}/$s3Key';
-
     return {
       'label': randomLabel,
-      'annotated_url': imagePath, // In mock, just return original image path
+      'labels': [randomLabel],
       'confidence': 0.85 + (DateTime.now().millisecond % 15) / 100,
       'mock': true, // Flag to indicate this is mock data
     };

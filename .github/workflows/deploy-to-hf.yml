@@ -24,7 +24,7 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           # Remove files not needed for deployment
-          rm -rf data/ runs/ test_results/ sample_model_data/ notebooks/ yolov8n.pt *.png
+          rm -rf data/ test_results/ sample_model_data/ notebooks/ *.png
           # Remove Flutter platform directories (only need Flask backend)
           rm -rf app/final_design/macos app/final_design/ios app/final_design/android app/final_design/windows app/final_design/linux app/final_design/web app/final_design/test
           # Use HF-specific README with Space configuration

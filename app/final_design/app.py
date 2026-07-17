@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -212,38 +213,35 @@ def get_today_date_api():
 @app.post("/generate-ai-predictions")
 def generate_ai_predictions():
     try:
-        data = request.get_json(silent=True) or request.form
+        user_id = request.form.get("user_id")
+        file = request.files.get("file")
 
-        user_id = data.get("user_id")
-        file_name = data.get("file_name")
-        s3_key = data.get("s3_key")
+        if not (user_id and file):
+            return jsonify({"status": "error", "message": "user_id_and_file_required"}), 400
 
-        if not (user_id and file_name and s3_key):
-            return jsonify({"status": "error", "message": "user_id_file_name_s3_key_required"}), 400
-
-        # 1) Download from storage into temp_folder/raw_image
-        local_dir = "temp_folder/raw_image"
+        # 1) Save the image supplied in the request to a local temp file.
+        #    The image is processed in-place and never stored in the cloud.
+        local_dir = constants.TEMP_FOLDER_RAW_PATH
         os.makedirs(local_dir, exist_ok=True)
-        local_path = os.path.join(local_dir, file_name)
+        safe_filename = secure_filename(file.filename or "")
+        if not safe_filename:
+            return jsonify({"status": "error", "message": "invalid_filename"}), 400
 
-        result_path = storage.download_file(s3_key, local_path)
-        if not result_path:
-            return jsonify({"status": "error", "message": "download_failed"}), 500
+        base_dir = Path(local_dir).resolve()
+        local_path_obj = (base_dir / safe_filename).resolve()
+        if base_dir != local_path_obj.parent and base_dir not in local_path_obj.parents:
+            return jsonify({"status": "error", "message": "invalid_file_path"}), 400
 
-        # 2) Run YOLO + CNN on the downloaded image
-        result = generate_final_image(result_path)
-        if not result or "output_path" not in result:
+        local_path = str(local_path_obj)
+        file.save(local_path)
+
+        # 2) Run the CNN ensemble on the image
+        result = generate_final_image(local_path)
+        if not result or "label" not in result:
             return jsonify({"status": "error", "message": "ai_prediction_generation_failed"}), 500
 
         label = result["label"]
-        annotated_image_path = result["output_path"]
-
-        # 3) Upload annotated image back to storage
-        if not os.path.exists(annotated_image_path):
-            return jsonify({"status": "error", "message": "annotated_image_missing"}), 500
-
-        annotated_file_name = os.path.basename(annotated_image_path)
-        storage.add_file(annotated_file_name, annotated_image_path, user_id, is_annotated=True)
+        confidence = result.get("confidence")
 
         # Clean up temp folder
         try:
@@ -252,16 +250,13 @@ def generate_ai_predictions():
         except OSError as e:
             app.logger.warning(f"Error deleting temp folder: {e}")
 
-        today = StorageProvider.get_today_date()
-        annotated_s3_key = f"{user_id}/{today}/annotated_images/{annotated_file_name}"
-        url = storage.get_file_url(annotated_s3_key)
-
         return jsonify({
             "status": "ok",
-            "label": label,
-            "annotated_image_path": annotated_image_path,
-            "annotated_s3_key": annotated_s3_key,
-            "annotated_url": url,
+            # generate_final_image returns the top-3 classes; expose the top
+            # prediction as `label` and the full ranked list as `labels`.
+            "label": label[0] if isinstance(label, list) and label else label,
+            "labels": label,
+            "confidence": confidence,
         }), 200
 
     except Exception as e:

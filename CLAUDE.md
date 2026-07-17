@@ -12,4 +12,4 @@
 - Keep commit messages concise and descriptive
 
 ## Project Overview
-Pelta AI - Feline Skin Disease Detection mobile app using Flutter + Flask + YOLO + CNN.
+Pelta AI - Feline Skin Disease Detection mobile app using Flutter + Flask + CNN.
