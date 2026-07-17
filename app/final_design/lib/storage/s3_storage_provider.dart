@@ -85,12 +85,12 @@ class S3StorageProvider implements AppStorageProvider {
   Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required List<int> imageBytes,
   }) async {
     return await S3ApiService.generateAIPredictions(
       userId: userId,
       fileName: fileName,
-      s3Key: s3Key,
+      imageBytes: imageBytes,
     );
   }
 

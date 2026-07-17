@@ -10,7 +10,7 @@ license: mit
 
 # Pelta AI Backend
 
-Flask backend for feline skin disease detection using YOLOv8 + CNN.
+Flask backend for feline skin disease detection using a CNN ensemble.
 
 ## API Endpoints
 

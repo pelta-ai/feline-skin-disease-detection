@@ -10,8 +10,7 @@
 ### Core Features
 - [x] Email/Password auth with email verification (Firebase)
 - [x] Camera capture and gallery upload
-- [x] YOLOv8 lesion detection + CNN classification
-- [x] Annotated results with colored bounding boxes
+- [x] CNN ensemble disease classification
 - [x] Recent diagnosis history and streak tracking
 
 ### Infrastructure
