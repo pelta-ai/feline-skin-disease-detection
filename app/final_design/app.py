@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 # Load environment variables from .env file (for local development)
@@ -222,7 +223,16 @@ def generate_ai_predictions():
         #    The image is processed in-place and never stored in the cloud.
         local_dir = constants.TEMP_FOLDER_RAW_PATH
         os.makedirs(local_dir, exist_ok=True)
-        local_path = os.path.join(local_dir, file.filename)
+        safe_filename = secure_filename(file.filename or "")
+        if not safe_filename:
+            return jsonify({"status": "error", "message": "invalid_filename"}), 400
+
+        base_dir = Path(local_dir).resolve()
+        local_path_obj = (base_dir / safe_filename).resolve()
+        if base_dir != local_path_obj.parent and base_dir not in local_path_obj.parents:
+            return jsonify({"status": "error", "message": "invalid_file_path"}), 400
+
+        local_path = str(local_path_obj)
         file.save(local_path)
 
         # 2) Run the CNN ensemble on the image
