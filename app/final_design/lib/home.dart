@@ -1,7 +1,6 @@
 import 'dart:developer';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:final_design/storage/index.dart';
@@ -125,54 +124,37 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   String? _predictedLabel;
-  String? _annotatedImageUrl;
+  Uint8List? _pickedImageBytes;
   bool _isLoading = false;
 
-  /// Processes the picked image: uploads, runs AI predictions, and displays results
+  /// Processes the picked image: runs AI predictions locally and displays results.
+  /// The image is sent directly to the backend and is not stored in the cloud.
   Future<void> _processImage(XFile pickedFile) async {
     final fileName = pickedFile.name;
     final userId = currentUser!;
 
+    final bytes = await pickedFile.readAsBytes();
+
     setState(() {
       _predictedLabel = null;
-      _annotatedImageUrl = null;
+      _pickedImageBytes = bytes;
       _isLoading = true;
     });
 
     try {
-      // 1. Upload image (use bytes on web, file on mobile)
-      if (kIsWeb) {
-        final bytes = await pickedFile.readAsBytes();
-        await storage.uploadFileBytes(bytes, fileName, userId, isAnnotated: false);
-      } else {
-        final file = File(pickedFile.path);
-        await storage.uploadFile(file, userId, isAnnotated: false);
-      }
-
-      // 2. Get today's date
-      final today = await storage.getTodayDate();
-      if (today == null) {
-        log("Could not get date");
-        return;
-      }
-
-      final storageKey = "$userId/$today/images/$fileName";
-
-      // 3. Generate predictions
+      // Run predictions directly on the picked image bytes (no cloud upload)
       final result = await storage.generateAIPredictions(
         userId: userId,
         fileName: fileName,
-        s3Key: storageKey,
+        imageBytes: bytes,
       );
 
       if (!mounted || result == null) return;
 
       final label = result['label'] as String?;
-      final annotatedUrl = result['annotated_url'] as String?;
 
       setState(() {
         _predictedLabel = label;
-        _annotatedImageUrl = annotatedUrl;
       });
     } catch (e) {
       log("Error processing image: $e");
@@ -286,7 +268,7 @@ class _HomeState extends State<Home> {
                 ],
               ),
             ),
-          if (_annotatedImageUrl != null && !_isLoading)
+          if (_pickedImageBytes != null && !_isLoading)
             Padding(
               padding: const EdgeInsets.only(top: 20),
               child: Column(
@@ -301,23 +283,11 @@ class _HomeState extends State<Home> {
                     ),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      _annotatedImageUrl!,
+                    child: Image.memory(
+                      _pickedImageBytes!,
                       width: 280,
                       height: 280,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return SizedBox(
-                          width: 280,
-                          height: 280,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: colorMain,
-                            ),
-                          ),
-                        );
-                      },
                     ),
                   ),
                 ],

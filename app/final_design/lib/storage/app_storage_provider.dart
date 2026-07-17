@@ -73,14 +73,16 @@ abstract class AppStorageProvider {
   // AI Integration
   // ============================================
 
-  /// Generate AI predictions for an uploaded image
+  /// Generate AI predictions for an image.
   ///
-  /// This calls the backend to run YOLO + CNN on the image.
-  /// Returns a map with 'label' and 'annotated_url' on success.
+  /// Sends the image bytes to the backend, which runs the CNN ensemble and
+  /// returns the predicted label(s). The image is processed in-place and is
+  /// never uploaded to cloud storage.
+  /// Returns a map with 'label' (and 'labels') on success.
   Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required List<int> imageBytes,
   });
 
   /// Get today's date from the backend (for consistency)

@@ -2,11 +2,11 @@
 
 > *"Pelta"* means "small shield" in Latin — protection for your pet's skin health.
 
-A mobile app that uses AI to detect skin diseases in cats from photos. Built with Flutter (frontend) and Flask + YOLO + CNN (backend).
+A mobile app that uses AI to detect skin diseases in cats from photos. Built with Flutter (frontend) and Flask + CNN (backend).
 
 ## Features
 
-- **AI-Powered Detection**: YOLOv8 for lesion detection + CNN for disease classification
+- **AI-Powered Detection**: CNN ensemble for disease classification
 - **Disease Categories**: Demodicosis, Dermatitis, Flea Allergy, Fungus, Ringworm, Scabies
 - **User Accounts**: Firebase Authentication with email verification
 - **Scan History**: View recent diagnoses and track pet health over time
@@ -17,7 +17,6 @@ A mobile app that uses AI to detect skin diseases in cats from photos. Built wit
 |-----------|------------|
 | Mobile App | Flutter |
 | Backend | Flask |
-| Object Detection | YOLOv8 |
 | Classification | CNN (Keras/TensorFlow) |
 | Storage | Supabase Storage |
 | Auth | Firebase Authentication |

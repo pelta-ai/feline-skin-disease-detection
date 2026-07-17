@@ -187,13 +187,12 @@ class S3ApiService {
   static Future<Map<String, dynamic>?> generateAIPredictions({
     required String userId,
     required String fileName,
-    required String s3Key,
+    required List<int> imageBytes,
   }) async {
     final uri = Uri.parse("$baseUrl/generate-ai-predictions");
     final request = http.MultipartRequest('POST', uri)
       ..fields['user_id'] = userId
-      ..fields['file_name'] = fileName
-      ..fields['s3_key'] = s3Key;
+      ..files.add(http.MultipartFile.fromBytes('file', imageBytes, filename: fileName));
 
     final response = await request.withDefaultHeaders().send();
     final body = await response.stream.bytesToString();

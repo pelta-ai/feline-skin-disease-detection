@@ -12,7 +12,6 @@ DATA_PATH = "new_data"
 
 CNN_DATA_NPZ_NAME = "feline_skin_disease_sample_data"
 CNN_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_cnn.keras")
-YOLO_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_yolo.pt")
 
 # Ensemble used for final inference. Frozen transfer-learning gave the best
 # reliability/performance combo (lowest seed-to-seed variance); EfficientNet-B0
