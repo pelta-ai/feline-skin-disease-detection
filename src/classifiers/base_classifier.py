@@ -135,7 +135,8 @@ class BaseClassifier(ABC):
         return model
 
     # ── evaluation ──────────────────────────────────────────────────
-    def _collect_y_true_y_pred_probs(self, model, dataset):
+    @staticmethod
+    def collect_y_true_y_pred_probs(model, dataset):
         y_true_list, y_prob_list = [], []
         for x_batch, y_batch in dataset:
             probs = model.predict(x_batch, verbose=0)
@@ -183,7 +184,7 @@ class BaseClassifier(ABC):
             raise ValueError("Ensure that test_ds is already built.")
 
         #y_true is the true label, y_pred is the predicted label, y_prob is the predicted probabilities
-        y_true, y_pred, y_prob = self._collect_y_true_y_pred_probs(model, self.test_ds)
+        y_true, y_pred, y_prob = self.collect_y_true_y_pred_probs(model, self.test_ds)
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
 
@@ -245,23 +246,19 @@ class BaseClassifier(ABC):
         plt.figure(fig.number)
         plt.show()
 
-    def fit_temperature(self, model=None, model_path=None):
-        model = self._check_model_exists(model=model, model_path=model_path)
-
-        if self.val_ds is None:
-            raise ValueError("Ensure that test_ds is already built.")
-        
-        y_true_val, y_pred, y_prob_val = self._collect_y_true_y_pred_probs(model, self.val_ds)
-        y = self._to_int(y_true_val)
+    @staticmethod
+    def fit_temperature_from_probs(y_true, y_prob):
+        y = BaseClassifier._to_int(y_true)
         def nll(T):
-            p = self._scale(y_prob_val, T)
+            p = BaseClassifier._scale(y_prob, T)
             true_p = p[np.arange(len(y)), y]
             return -np.mean(np.log(np.clip(true_p, 1e-12, 1.0)))
         
         return float(minimize_scalar(nll, bounds=(0.05, 10.0), method="bounded").x)
     
-    def expected_calibration_error(self, y_true, y_prob, n_bins=15):
-        y = self._to_int(y_true)
+    @staticmethod
+    def expected_calibration_error(y_true, y_prob, n_bins=15):
+        y = BaseClassifier._to_int(y_true)
         conf = y_prob.max(1)
         correct = (y_prob.argmax(1) == y).astype(float)
         edges = np.linspace(0.0, 1.0, n_bins + 1)
@@ -273,6 +270,15 @@ class BaseClassifier(ABC):
                 ece += (m.sum() / n) * abs(conf[m].mean() - correct[m].mean())
 
         return ece
+
+    def fit_temperature(self, model=None, model_path=None):
+        model = self._check_model_exists(model=model, model_path=model_path)
+
+        if self.val_ds is None:
+            raise ValueError("Ensure that test_ds is already built.")
+        
+        y_true_val, y_pred, y_prob_val = self.collect_y_true_y_pred_probs(model, self.val_ds)
+        return self.fit_temperature_from_probs(y_true_val, y_prob_val)
     
     # ── extras ──────────────────────────────────────────────────
     def _check_model_exists(self, model=None, model_path=None):
