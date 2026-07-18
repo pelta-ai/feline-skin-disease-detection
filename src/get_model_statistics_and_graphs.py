@@ -19,7 +19,7 @@ seeds = range(1, 16)  # Seeds 1 through 15
 
 for arch in architectures:
     for approach in approaches:
-        all_cms, all_ps, all_rs, all_fs, all_eces_before, all_eces_after, all_y_true, all_y_prob, all_y_prob_cal = [], [], [], [], [], [], [], [], []
+        all_cms, all_ps, all_rs, all_fs, all_eces_before, all_eces_after, all_y_true, all_y_prob, all_y_prob_cal, all_T = [], [], [], [], [], [], [], [], [], []
         
         print(f"\n--- Processing: {arch} ({approach}) ---")
         
@@ -47,13 +47,14 @@ for arch in architectures:
             all_y_true.append(result['y_true'])
             all_y_prob.append(result['y_prob'])
             all_y_prob_cal.append(result['y_prob_cal'])
+            all_T.append(result['temperature'])
 
         if not all_cms:
             continue
 
         # 1. Aggregate
         mean_cm = np.mean(all_cms, axis=0)
-        avg_p, avg_r, avg_f1, avg_ece_before, avg_ece_after = np.mean(all_ps, axis=0), np.mean(all_rs, axis=0), np.mean(all_fs, axis=0), np.mean(all_eces_before), np.mean(all_eces_after)
+        avg_p, avg_r, avg_f1, avg_ece_before, avg_ece_after, avg_T = np.mean(all_ps, axis=0), np.mean(all_rs, axis=0), np.mean(all_fs, axis=0), np.mean(all_eces_before), np.mean(all_eces_after), np.mean(all_T)
         yt = np.concatenate(all_y_true)
         yp = np.concatenate(all_y_prob)
         ypc = np.concatenate(all_y_prob_cal)
@@ -65,6 +66,7 @@ for arch in architectures:
             'Precision': avg_p, 'Recall': avg_r, 'F1-Score': avg_f1,
             'Expected Calibration Error Before Calibration': avg_ece_before,
             'Expected Calibration Error After Calibration': avg_ece_after,
+            'Temperature': avg_T,
         })
         print(summary_df.to_string(index=False))
 
