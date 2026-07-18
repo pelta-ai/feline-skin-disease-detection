@@ -36,3 +36,4 @@ Detailed Evaluation (Overall):
 
     ECE Before Calibration: 0.041472
     ECE After Calibration: 0.03925
+    Temperature: 1.272125
