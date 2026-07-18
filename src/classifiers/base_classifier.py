@@ -193,7 +193,7 @@ class BaseClassifier(ABC):
         ece_before_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob)
 
         T = self.fit_temperature(model=model)
-        y_prob_cal = self._scale(y_prob, T)
+        y_prob_cal = self.scale(y_prob, T)
 
         ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
 
@@ -226,7 +226,7 @@ class BaseClassifier(ABC):
         return y.argmax(1) if (y.ndim > 1 and y.shape[1] > 1) else y.ravel().astype(int)
     
     @staticmethod
-    def _scale(probs, T):
+    def scale(probs, T):
         z = np.log(np.clip(probs, 1e-12, 1.0)) / T
         z -= z.max(1, keepdims=True)
         e = np.exp(z)
@@ -250,7 +250,7 @@ class BaseClassifier(ABC):
     def fit_temperature_from_probs(y_true, y_prob):
         y = BaseClassifier._to_int(y_true)
         def nll(T):
-            p = BaseClassifier._scale(y_prob, T)
+            p = BaseClassifier.scale(y_prob, T)
             true_p = p[np.arange(len(y)), y]
             return -np.mean(np.log(np.clip(true_p, 1e-12, 1.0)))
         

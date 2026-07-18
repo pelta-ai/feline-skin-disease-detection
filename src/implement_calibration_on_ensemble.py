@@ -34,7 +34,7 @@ def implement_calibration_on_ensemble():
 
     ece_before = BaseClassifier.expected_calibration_error(y_true_test, ens_test_probs)
     ece_after  = BaseClassifier.expected_calibration_error(
-        y_true_test, BaseClassifier._scale(ens_test_probs, T)
+        y_true_test, BaseClassifier.scale(ens_test_probs, T)
     )
 
     print(f"T = {T:.4f}")
