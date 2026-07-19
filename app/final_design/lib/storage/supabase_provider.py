@@ -14,6 +14,14 @@ Usage:
     storage.upload_file("/local/image.jpg", "users/abc123/2026-01-24/images/image.jpg")
 """
 
+# =============================================================================
+# CLOUD STORAGE — DORMANT (reserved for future use)
+# -----------------------------------------------------------------------------
+# The app is moving toward on-device local storage. This cloud provider is kept
+# intact for future plans but is not the active default path. It is only used
+# when the backend is explicitly configured with STORAGE_PROVIDER=supabase.
+# =============================================================================
+
 import os
 import logging
 from datetime import datetime
