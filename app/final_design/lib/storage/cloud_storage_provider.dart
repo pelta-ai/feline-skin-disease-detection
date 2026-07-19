@@ -1,16 +1,21 @@
 import 'dart:io';
 import 'package:final_design/storage/app_storage_provider.dart';
-import 'package:final_design/utils/aws_s3_api.dart';
+import 'package:final_design/utils/backend_api.dart';
 
-/// Storage provider that delegates operations to a backend API.
+/// Cloud storage provider — delegates operations to the backend API over HTTP.
 ///
-/// All storage operations (upload, download, list, etc.) are performed
-/// via HTTP calls to the backend service.
-class S3StorageProvider implements AppStorageProvider {
+/// This is the frontend client for CLOUD storage. It does not talk to S3 (or
+/// Supabase) directly; it makes HTTP calls to the Flask backend, which chooses
+/// the actual cloud provider (Supabase by default, S3 legacy) via its
+/// STORAGE_PROVIDER env var.
+///
+/// Note: the underlying `BackendApiService` is likewise a generic backend
+/// client — it is not S3-specific.
+class CloudStorageProvider implements AppStorageProvider {
   @override
   Future<bool> createUserFolder(String userId) async {
     try {
-      await S3ApiService.createUserFolder(userId);
+      await BackendApiService.createUserFolder(userId);
       return true;
     } catch (e) {
       return false;
@@ -19,13 +24,13 @@ class S3StorageProvider implements AppStorageProvider {
 
   @override
   Future<bool> folderExists(String path) async {
-    return await S3ApiService.folderExists(path);
+    return await BackendApiService.folderExists(path);
   }
 
   @override
   Future<bool> createTodayFolder(String userId) async {
     try {
-      await S3ApiService.createTodayFolder(userId);
+      await BackendApiService.createTodayFolder(userId);
       return true;
     } catch (e) {
       return false;
@@ -35,7 +40,7 @@ class S3StorageProvider implements AppStorageProvider {
   @override
   Future<String?> uploadFile(File file, String userId, {bool isAnnotated = false}) async {
     try {
-      await S3ApiService.uploadFile(file, userId, isAnnotated);
+      await BackendApiService.uploadFile(file, userId, isAnnotated);
       // Return the expected path
       final today = await getTodayDate();
       if (today == null) return null;
@@ -49,7 +54,7 @@ class S3StorageProvider implements AppStorageProvider {
   @override
   Future<String?> uploadFileBytes(List<int> bytes, String fileName, String userId, {bool isAnnotated = false}) async {
     try {
-      await S3ApiService.uploadFileBytes(bytes, fileName, userId, isAnnotated);
+      await BackendApiService.uploadFileBytes(bytes, fileName, userId, isAnnotated);
       // Return the expected path
       final today = await getTodayDate();
       if (today == null) return null;
@@ -62,12 +67,12 @@ class S3StorageProvider implements AppStorageProvider {
 
   @override
   Future<String?> getFileUrl(String path) async {
-    return await S3ApiService.getFileUrl(path);
+    return await BackendApiService.getFileUrl(path);
   }
 
   @override
   Future<String?> downloadFile(String remotePath, String localPath) async {
-    // Note: S3ApiService.triggerDownloadFromS3 has a different signature
+    // Note: BackendApiService.triggerDownloadFromS3 has a different signature
     // and is used for a specific workflow. Direct file download from S3
     // is typically done via pre-signed URLs (getFileUrl).
     //
@@ -78,7 +83,7 @@ class S3StorageProvider implements AppStorageProvider {
 
   @override
   Future<List<String>> listFiles(String prefix) async {
-    return await S3ApiService.listObjectPaths(prefix: prefix);
+    return await BackendApiService.listObjectPaths(prefix: prefix);
   }
 
   @override
@@ -87,7 +92,7 @@ class S3StorageProvider implements AppStorageProvider {
     required String fileName,
     required List<int> imageBytes,
   }) async {
-    return await S3ApiService.generateAIPredictions(
+    return await BackendApiService.generateAIPredictions(
       userId: userId,
       fileName: fileName,
       imageBytes: imageBytes,
@@ -96,7 +101,7 @@ class S3StorageProvider implements AppStorageProvider {
 
   @override
   Future<String?> getTodayDate() async {
-    return await S3ApiService.getTodayDateFromBackend();
+    return await BackendApiService.getTodayDateFromBackend();
   }
 
   @override
@@ -104,7 +109,7 @@ class S3StorageProvider implements AppStorageProvider {
     // Not implemented for production S3
     // This would be dangerous - only allow in mock
     throw UnimplementedError(
-      'clearAllData() is not available for S3StorageProvider. '
+      'clearAllData() is not available for CloudStorageProvider. '
       'Use AWS console or CLI to manage S3 data.',
     );
   }

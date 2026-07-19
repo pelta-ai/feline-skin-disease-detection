@@ -1,9 +1,9 @@
 import 'dart:developer';
 
-import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:final_design/storage/index.dart';
+import 'package:final_design/diagnosis_store.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/mini_calendar.dart';
 import 'package:final_design/drawer.dart';
@@ -123,11 +123,10 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  String? _predictedLabel;
-  Uint8List? _pickedImageBytes;
   bool _isLoading = false;
 
-  /// Processes the picked image: runs AI predictions locally and displays results.
+  /// Processes the picked image: runs AI predictions on the backend, stores the
+  /// result, notifies the user, and opens the Recent Diagnosis screen.
   /// The image is sent directly to the backend and is not stored in the cloud.
   Future<void> _processImage(XFile pickedFile) async {
     final fileName = pickedFile.name;
@@ -136,8 +135,6 @@ class _HomeState extends State<Home> {
     final bytes = await pickedFile.readAsBytes();
 
     setState(() {
-      _predictedLabel = null;
-      _pickedImageBytes = bytes;
       _isLoading = true;
     });
 
@@ -153,9 +150,25 @@ class _HomeState extends State<Home> {
 
       final label = result['label'] as String?;
 
-      setState(() {
-        _predictedLabel = label;
-      });
+      // Save the completed diagnosis so the Recent Diagnosis screen can show it.
+      DiagnosisStore.save(DiagnosisResult(
+        imageBytes: bytes,
+        label: label,
+        timestamp: DateTime.now(),
+      ));
+
+      if (!mounted) return;
+
+      // In-app "analysis done" notification.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Analysis complete — view it in Recent Diagnosis'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Show the result on the Recent Diagnosis screen instead of here.
+      Navigator.pushNamed(context, '/recent_diagnosis');
     } catch (e) {
       log("Error processing image: $e");
       if (mounted) {
@@ -268,31 +281,6 @@ class _HomeState extends State<Home> {
                 ],
               ),
             ),
-          if (_pickedImageBytes != null && !_isLoading)
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Column(
-                children: [
-                  if (_predictedLabel != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        "Detected: $_predictedLabel",
-                        style: textThemeColor.titleMedium,
-                      ),
-                    ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.memory(
-                      _pickedImageBytes!,
-                      width: 280,
-                      height: 280,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ],
-              ),
-            )
         ],
       ),
     ));
