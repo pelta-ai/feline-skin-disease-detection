@@ -31,7 +31,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: PreferredSize(
-            preferredSize: Size.fromHeight(getScreenHeight(context) * 0.30),
+            preferredSize: Size.fromHeight(getScreenHeight(context) * 0.20),
             child: AppBar(
               backgroundColor: colorMain,
               automaticallyImplyLeading: true,
@@ -47,7 +47,8 @@ class HomeScreen extends StatelessWidget {
                           style: textThemeWhite.displaySmall,
                         ),
                       ),
-                      StaticMiniCalendar(),
+                      //StaticMiniCalendar(),
+                      SizedBox(height: getScreenHeight(context) * 0.01),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -79,7 +80,8 @@ class HomeScreen extends StatelessWidget {
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Daily Check coming soon!'),
+                                        content:
+                                            Text('Daily Check coming soon!'),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
@@ -228,7 +230,8 @@ class _HomeState extends State<Home> {
                       child: TextButton(
                           onPressed: _isLoading ? null : _pickImageFromGallery,
                           style: TextButton.styleFrom(
-                            backgroundColor: _isLoading ? Colors.grey : colorMain,
+                            backgroundColor:
+                                _isLoading ? Colors.grey : colorMain,
                             padding: EdgeInsets.symmetric(
                                 horizontal: 60, vertical: 25),
                             shape: RoundedRectangleBorder(
@@ -245,7 +248,8 @@ class _HomeState extends State<Home> {
                         child: TextButton(
                             onPressed: _isLoading ? null : _pickImageFromCamera,
                             style: TextButton.styleFrom(
-                              backgroundColor: _isLoading ? Colors.grey : colorMain,
+                              backgroundColor:
+                                  _isLoading ? Colors.grey : colorMain,
                               padding: EdgeInsets.symmetric(
                                   horizontal: 60, vertical: 25),
                               shape: RoundedRectangleBorder(
