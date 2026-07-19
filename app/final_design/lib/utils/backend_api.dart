@@ -23,11 +23,16 @@ extension MultipartRequestExtension on http.MultipartRequest {
   }
 }
 
-class S3ApiService {
+/// HTTP client for the Flask backend.
+///
+/// Despite the historical "S3" naming this replaces, these calls are not
+/// S3-specific — they hit the backend's REST endpoints, and the backend
+/// decides which storage provider (Supabase, S3, mock) actually runs.
+class BackendApiService {
   /// Backend URL configured via AppConfig
   static String get baseUrl => AppConfig.backendUrl;
 
-  // List S3 objects under a prefix
+  // List object paths under a prefix
   static Future<List<String>> listObjectPaths({String prefix = ''}) async {
     final uri = Uri.parse('$baseUrl/list-objects?prefix=$prefix');
     final response = await http.get(uri, headers: _defaultHeaders());

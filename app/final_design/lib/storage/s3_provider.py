@@ -22,6 +22,14 @@ Usage:
     storage.upload_file("/local/image.jpg", "user123/2025-12-19/images/image.jpg")
 """
 
+# =============================================================================
+# CLOUD STORAGE — DORMANT & LEGACY (reserved for future use)
+# -----------------------------------------------------------------------------
+# The app is moving toward on-device local storage. Supabase is the preferred
+# cloud provider; this S3 provider is kept as a legacy/fallback option. It is
+# only used when the backend is explicitly configured with STORAGE_PROVIDER=s3.
+# =============================================================================
+
 import os
 import logging
 from typing import List, Optional
