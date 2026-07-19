@@ -4,9 +4,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants
 
 def data_leakage_audit():
-    train_path = os.path.join(constants.DATA_IMAGES_PATH, "train")
-    test_path = os.path.join(constants.DATA_IMAGES_PATH, "test")
-    val_path = os.path.join(constants.DATA_IMAGES_PATH, "val")
+    train_path = os.path.join(constants.DATA_PATH, "train")
+    test_path = os.path.join(constants.DATA_PATH, "test")
+    val_path = os.path.join(constants.DATA_PATH, "val")
 
     train_images = []
     test_images = []
