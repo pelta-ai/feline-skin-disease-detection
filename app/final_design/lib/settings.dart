@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -44,14 +46,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final changed = await ProfilePicture.pickFrom(source);
       if (changed) _toast('Profile picture updated');
+    } on StateError catch (e) {
+      // Desktop image_picker implementations have no camera delegate, so
+      // ImageSource.camera throws instead of returning null.
+      log('Camera unavailable for profile picture: $e');
+      _toast('Camera is not available on this device.');
     } catch (e) {
-      _toast('Could not save that image. Please try another.');
+      // Log the real cause — a single catch-all toast makes failures like the
+      // one above impossible to tell apart.
+      log('Could not save profile picture: $e');
+      _toast(AppConfig.isDevelopment
+          // Surfaced in dev builds only: without it the cause is invisible
+          // unless you happen to be watching the console.
+          ? 'Could not save image: $e'
+          : 'Could not save that image. Please try another.');
     }
   }
 
   /// Bottom sheet offering camera, gallery, and (when set) removal.
   Future<void> _showPictureOptions() async {
     final hasPicture = ProfilePicture.notifier.value != null;
+    // Desktop builds have no camera support, so offering it would only ever
+    // produce an error.
+    final hasCamera = ImagePicker().supportsImageSource(ImageSource.camera);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -64,15 +81,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined,
-                  color: colorGrayDark),
-              title: Text('Take a photo', style: textThemeColor.bodyLarge),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _changePicture(ImageSource.camera);
-              },
-            ),
+            if (hasCamera)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined,
+                    color: colorGrayDark),
+                title: Text('Take a photo', style: textThemeColor.bodyLarge),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _changePicture(ImageSource.camera);
+                },
+              ),
             ListTile(
               leading:
                   const Icon(Icons.photo_library_outlined, color: colorGrayDark),

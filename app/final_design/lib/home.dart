@@ -150,12 +150,10 @@ class _HomeState extends State<Home> {
 
       if (!mounted || result == null) return;
 
-      final label = result['label'] as String?;
-
       // Save the completed diagnosis so the Recent Diagnosis screen can show it.
-      DiagnosisStore.save(DiagnosisResult(
+      DiagnosisStore.save(DiagnosisResult.fromResponse(
         imageBytes: bytes,
-        label: label,
+        response: result,
         timestamp: DateTime.now(),
       ));
 

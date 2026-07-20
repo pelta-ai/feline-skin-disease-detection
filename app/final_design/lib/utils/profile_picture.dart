@@ -1,38 +1,54 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:final_design/utils/constants.dart';
 
 /// Local-only profile picture storage.
 ///
-/// The image is copied into the app's documents directory and the resulting
-/// path is persisted with [SharedPreferences]. Nothing is uploaded — cloud
-/// storage is dormant, so the picture lives on the device only and does not
-/// follow the user to a new install or a second device.
+/// The picture is held as bytes and persisted base64-encoded in
+/// [SharedPreferences]. Nothing is uploaded — cloud storage is dormant, so the
+/// picture stays on this device and does not follow the user elsewhere.
+///
+/// Bytes rather than a file on disk: `path_provider` and `dart:io` have no web
+/// implementation, so a file-based approach throws `MissingPluginException` in
+/// the browser. `shared_preferences` works on every platform the app targets.
 ///
 /// [notifier] lets widgets rebuild when the picture changes, so the drawer
 /// avatar and the settings screen stay in sync without extra plumbing.
 class ProfilePicture {
   ProfilePicture._();
 
-  static const String _prefsKey = 'profile_picture_path';
+  static const String _prefsKey = 'profile_picture_bytes';
 
-  /// Current picture path, or null when none is set.
+  /// Longest edge of the stored image, in pixels.
+  ///
+  /// Avatars render small, and the encoded result has to fit in browser
+  /// local storage alongside everything else, so the source is downscaled
+  /// rather than stored at full camera resolution.
+  static const int _maxEdge = 256;
+
+  /// Ceiling on what may be persisted when downscaling fails and the original
+  /// is used instead. Base64 inflates by ~4/3, and browser local storage is
+  /// only a few megabytes in total.
+  static const int _maxStoredBytes = 1024 * 1024;
+
+  /// Current picture bytes, or null when none is set.
   ///
   /// Widgets can listen to this directly via [ValueListenableBuilder].
-  static final ValueNotifier<String?> notifier = ValueNotifier<String?>(null);
+  static final ValueNotifier<Uint8List?> notifier =
+      ValueNotifier<Uint8List?>(null);
 
   static bool _loaded = false;
 
-  /// Loads the saved path into [notifier].
+  /// Loads the saved picture into [notifier].
   ///
-  /// Safe to call repeatedly; the work only happens once. A saved path whose
-  /// file has since disappeared (e.g. the OS cleared app data) is treated as
-  /// "no picture" and the stale preference is cleared.
+  /// Safe to call repeatedly; the work only happens once. Unreadable saved data
+  /// is discarded rather than left to fail on every render.
   static Future<void> load() async {
     if (_loaded) return;
     _loaded = true;
@@ -41,9 +57,9 @@ class ProfilePicture {
     final saved = prefs.getString(_prefsKey);
     if (saved == null) return;
 
-    if (await File(saved).exists()) {
-      notifier.value = saved;
-    } else {
+    try {
+      notifier.value = base64Decode(saved);
+    } catch (_) {
       await prefs.remove(_prefsKey);
     }
   }
@@ -51,58 +67,90 @@ class ProfilePicture {
   /// Picks an image from [source] and stores it as the profile picture.
   ///
   /// Returns true when a new picture was saved, false when the user cancelled.
-  /// Throws if the file could not be copied, so callers can surface an error.
+  /// Throws if the image could not be decoded or stored, so callers can surface
+  /// an error.
   static Future<bool> pickFrom(ImageSource source) async {
-    final picked = await ImagePicker().pickImage(
-      source: source,
-      // Avatars render small; downscaling keeps the copy well under a megabyte.
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 85,
-    );
+    final picked = await ImagePicker().pickImage(source: source);
     if (picked == null) return false;
 
-    final dir = await getApplicationDocumentsDirectory();
-    final extension = picked.path.split('.').last;
-    // A unique filename each time, because Flutter's image cache keys on path:
-    // reusing one name would keep showing the previous picture.
-    final stamp = DateTime.now().millisecondsSinceEpoch;
-    final destination = File('${dir.path}/profile_picture_$stamp.$extension');
+    final original = await picked.readAsBytes();
 
-    await destination.writeAsBytes(await picked.readAsBytes());
-
-    final previous = notifier.value;
+    // Downscale in Dart rather than via ImagePicker's maxWidth/maxHeight: the
+    // web and desktop implementations silently ignore those options, so the
+    // full-resolution original would be what we tried to store.
+    Uint8List stored;
+    try {
+      stored = await _downscale(original);
+    } catch (e) {
+      // Downscaling is an optimisation, not a requirement. Keep the original
+      // when it is small enough to persist, rather than failing outright.
+      if (original.lengthInBytes > _maxStoredBytes) rethrow;
+      stored = original;
+    }
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, destination.path);
-    notifier.value = destination.path;
-
-    await _deleteQuietly(previous);
+    await prefs.setString(_prefsKey, base64Encode(stored));
+    notifier.value = stored;
     return true;
   }
 
   /// Removes the current profile picture, falling back to the default avatar.
   static Future<void> remove() async {
-    final previous = notifier.value;
-    if (previous == null) return;
+    if (notifier.value == null) return;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
     notifier.value = null;
-
-    await _deleteQuietly(previous);
   }
 
-  /// Deletes a superseded picture. Failure here is not worth surfacing — the
-  /// new picture is already saved and the leftover file is harmless.
-  static Future<void> _deleteQuietly(String? path) async {
-    if (path == null) return;
-    try {
-      final file = File(path);
-      if (await file.exists()) await file.delete();
-    } catch (_) {
-      // Ignored on purpose.
+  /// Re-encodes [bytes] so the longest edge is at most [_maxEdge].
+  ///
+  /// Deliberately built from decode + canvas draw + [ui.Image.toByteData]:
+  /// `ImageDescriptor.width` and friends throw `UnsupportedError` on web, and
+  /// the resize options on `instantiateImageCodec` are not honoured everywhere.
+  /// Drawing through a [ui.PictureRecorder] behaves the same on every platform.
+  static Future<Uint8List> _downscale(Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final source = frame.image;
+
+    final width = source.width;
+    final height = source.height;
+    final longestEdge = width > height ? width : height;
+
+    // Already small enough — keep the original encoding, which is usually
+    // smaller than the PNG produced below.
+    if (longestEdge <= _maxEdge) {
+      source.dispose();
+      codec.dispose();
+      return bytes;
     }
+
+    final scale = _maxEdge / longestEdge;
+    final targetWidth = (width * scale).round();
+    final targetHeight = (height * scale).round();
+
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawImageRect(
+      source,
+      ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      ui.Rect.fromLTWH(0, 0, targetWidth.toDouble(), targetHeight.toDouble()),
+      ui.Paint()..filterQuality = ui.FilterQuality.medium,
+    );
+
+    final picture = recorder.endRecording();
+    final resized = await picture.toImage(targetWidth, targetHeight);
+    final data = await resized.toByteData(format: ui.ImageByteFormat.png);
+
+    picture.dispose();
+    resized.dispose();
+    source.dispose();
+    codec.dispose();
+
+    if (data == null) {
+      throw StateError('Could not re-encode the selected image');
+    }
+    return data.buffer.asUint8List();
   }
 }
 
@@ -118,19 +166,15 @@ class ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String?>(
+    return ValueListenableBuilder<Uint8List?>(
       valueListenable: ProfilePicture.notifier,
-      builder: (context, path, _) {
+      builder: (context, bytes, _) {
         return CircleAvatar(
           radius: radius,
           backgroundColor: colorMainLight,
-          backgroundImage: path == null ? null : FileImage(File(path)),
-          child: path == null
-              ? Icon(
-                  Icons.person,
-                  size: radius,
-                  color: colorGrayDark,
-                )
+          backgroundImage: bytes == null ? null : MemoryImage(bytes),
+          child: bytes == null
+              ? Icon(Icons.person, size: radius, color: colorGrayDark)
               : null,
         );
       },

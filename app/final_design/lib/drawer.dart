@@ -11,7 +11,10 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
         Padding(
           padding: const EdgeInsets.only(top: 20),
         ),
-        const ProfileAvatar(radius: 30),
+        // Centered so the avatar keeps its natural size: a ListView gives its
+        // children tight full-width constraints, which would stretch the
+        // CircleAvatar's box and make BoxFit.cover show a magnified crop.
+        const Center(child: ProfileAvatar(radius: 30)),
         Padding(
           padding: const EdgeInsets.only(top: 20),
         ),
