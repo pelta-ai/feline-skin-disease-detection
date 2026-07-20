@@ -2,17 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/drawer.dart';
+import 'package:final_design/diagnosis_detail.dart';
+import 'package:final_design/diagnosis_info.dart';
 import 'package:final_design/diagnosis_store.dart';
-
-/// Turns a raw model label like "feline_acne" into "Feline Acne".
-String _prettifyLabel(String? label) {
-  if (label == null || label.isEmpty) return 'Unknown';
-  return label
-      .split('_')
-      .where((w) => w.isNotEmpty)
-      .map((w) => '${w[0].toUpperCase()}${w.substring(1)}')
-      .join(' ');
-}
 
 class RecentDiagnosisScreen extends StatelessWidget {
   const RecentDiagnosisScreen({super.key});
@@ -105,7 +97,8 @@ class RecentDiagnosis extends StatelessWidget {
   }
 }
 
-/// A single diagnosis rendered as a card: image thumbnail, label, timestamp.
+/// A single diagnosis rendered as a card: image thumbnail, headline label,
+/// top-prediction confidence, and timestamp. Tapping opens the full breakdown.
 class _DiagnosisCard extends StatelessWidget {
   final DiagnosisResult diagnosis;
 
@@ -113,50 +106,73 @@ class _DiagnosisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: colorMainLight,
+    final topConfidence = diagnosis.top?.confidence;
+
+    return Material(
+      color: colorMainLight,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.06),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => DiagnosisDetailScreen(diagnosis: diagnosis),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              diagnosis.imageBytes,
-              width: 84,
-              height: 84,
-              fit: BoxFit.cover,
-            ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.06),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _prettifyLabel(diagnosis.label),
-                  style: textThemeColor.titleMedium,
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(
+                  diagnosis.imageBytes,
+                  width: 84,
+                  height: 84,
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  DateFormat('MMM d, y · h:mm a').format(diagnosis.timestamp),
-                  style: textThemeColor.bodyMedium,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      diagnosis.headline,
+                      style: textThemeColor.titleMedium,
+                    ),
+                    if (topConfidence != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${formatConfidence(topConfidence)} confidence',
+                        style: textThemeColor.bodyMedium,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Text(
+                      DateFormat('MMM d, y · h:mm a')
+                          .format(diagnosis.timestamp),
+                      style: textThemeColor.bodySmall
+                          ?.copyWith(color: colorGrayDark),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right, color: colorGrayDark),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
