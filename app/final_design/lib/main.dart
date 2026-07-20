@@ -7,8 +7,11 @@ import 'package:final_design/sign_up.dart';
 import 'package:final_design/streak.dart';
 import 'package:final_design/results.dart';
 import 'package:final_design/email_verification.dart';
+import 'package:final_design/disclaimer.dart';
+import 'package:final_design/settings.dart';
 import 'package:final_design/auth/index.dart';
 import 'package:final_design/utils/app_config.dart';
+import 'package:final_design/utils/profile_picture.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -44,6 +47,10 @@ Future<void> main() async {
     await analytics.logAppOpen();
   }
 
+  // Load the locally saved profile picture so the drawer avatar is correct on
+  // the first frame rather than popping in afterwards.
+  await ProfilePicture.load();
+
   runApp(const MyApp());
 }
 
@@ -57,11 +64,15 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
+        // Gated at the route, not just in AuthWrapper: the login and email
+        // verification screens push '/home' directly, so a gate that lived only
+        // in AuthWrapper would be skipped on every fresh sign-in.
+        '/home': (context) => const DisclaimerGate(child: HomeScreen()),
         '/sign_up': (context) => const SignUpScreen(),
         '/verify_email': (context) => const EmailVerificationScreen(),
         '/streak': (context) => const StreakScreen(),
         '/recent_diagnosis': (context) => const RecentDiagnosisScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
     );
   }
@@ -71,7 +82,7 @@ class MyApp extends StatelessWidget {
 ///
 /// - Not logged in → Login screen
 /// - Logged in but unverified → Verification screen
-/// - Logged in and verified → Home screen
+/// - Logged in and verified → Medical disclaimer (once) → Home screen
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -87,7 +98,8 @@ class AuthWrapper extends StatelessWidget {
       return const EmailVerificationScreen();
     }
 
-    // User is logged in and verified
-    return const HomeScreen();
+    // User is logged in and verified — require one-time disclaimer acceptance
+    // before showing the home screen.
+    return const DisclaimerGate(child: HomeScreen());
   }
 }
