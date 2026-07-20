@@ -4,6 +4,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/app_config.dart';
+import 'package:final_design/utils/session.dart';
 import 'package:final_design/auth/index.dart';
 
 class EmailVerificationScreen extends StatelessWidget {
@@ -248,6 +249,9 @@ class _EmailVerificationState extends State<EmailVerification> {
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 await auth.signOut();
+                // Wipe this session's in-memory data before another account
+                // is used on this device.
+                clearUserSession();
                 if (mounted) {
                   navigator.pushReplacementNamed('/');
                 }

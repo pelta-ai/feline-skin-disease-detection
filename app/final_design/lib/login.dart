@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/validators.dart';
+import 'package:final_design/utils/session.dart';
 import 'package:final_design/auth/index.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -166,6 +167,9 @@ class _LoginScreenState extends State<Login> {
       log("User Logged In Successfully");
       // SECURITY: Clear password field after successful auth
       _passwordController.clear();
+      // Safeguard: discard any in-memory data left from a previous session so
+      // this account never sees another user's scans or streak.
+      clearUserSession();
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       // SECURITY: Clear password field on failure too

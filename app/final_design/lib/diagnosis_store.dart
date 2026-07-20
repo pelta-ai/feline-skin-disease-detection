@@ -115,4 +115,10 @@ class DiagnosisStore {
   static void save(DiagnosisResult result) {
     _history.insert(0, result);
   }
+
+  /// Drops all diagnoses. Call on sign-out so a new account signing in on the
+  /// same device never inherits the previous user's scan history.
+  static void clear() {
+    _history.clear();
+  }
 }
