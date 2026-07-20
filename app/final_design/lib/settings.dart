@@ -8,6 +8,7 @@ import 'package:final_design/disclaimer.dart';
 import 'package:final_design/utils/app_config.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
+import 'package:final_design/utils/session.dart';
 import 'package:final_design/utils/profile_picture.dart';
 
 /// Account and app settings.
@@ -220,6 +221,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (shouldSignOut != true) return;
 
     await auth.signOut();
+    // Wipe this session's in-memory data so the next account on this device
+    // can't see the previous user's scans or streak.
+    clearUserSession();
     if (!mounted) return;
 
     // Drop the whole history so back can't return to a signed-in screen.

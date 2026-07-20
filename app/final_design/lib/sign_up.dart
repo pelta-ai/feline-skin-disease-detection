@@ -4,6 +4,7 @@ import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/custom_text_fields.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/validators.dart';
+import 'package:final_design/utils/session.dart';
 import 'package:final_design/auth/index.dart';
 import 'package:final_design/storage/index.dart';
 
@@ -116,6 +117,10 @@ class _SignUpScreenState extends State<SignUp> {
       }
 
       log("User created: ${result.userId}");
+
+      // New account: discard any in-memory data left from a previous session
+      // so it never inherits another user's scans or streak.
+      clearUserSession();
 
       // 2. Try to create storage folder (non-blocking - don't prevent navigation if this fails)
       if (result.userId != null) {

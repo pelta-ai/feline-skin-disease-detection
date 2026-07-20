@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 class StreakData {
   static final Map<DateTime, String> _statusByDay = {};
 
+  /// Drops all day statuses. Call on sign-out so a new account signing in on
+  /// the same device never inherits the previous user's streak calendar.
+  static void clear() {
+    _statusByDay.clear();
+  }
+
   Map<DateTime, String> get status => _statusByDay;
 
   void setStatus(DateTime date, String status) {
