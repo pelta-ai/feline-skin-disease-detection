@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/constants.dart';
+import 'package:final_design/utils/profile_picture.dart';
 
 Drawer createDrawer(BuildContext context, String currentScreen) {
   return Drawer(
@@ -10,11 +11,7 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
         Padding(
           padding: const EdgeInsets.only(top: 20),
         ),
-        CircleAvatar(
-          radius: 30,
-          backgroundImage: AssetImage("assets/images/pfp.jpg"),
-          //backgroundColor: Colors.grey[200],
-        ),
+        const ProfileAvatar(radius: 30),
         Padding(
           padding: const EdgeInsets.only(top: 20),
         ),
@@ -66,12 +63,7 @@ Drawer createDrawer(BuildContext context, String currentScreen) {
             ),
             onTap: () {
               Navigator.of(context).pop(); // Close drawer first
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Settings coming soon!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              Navigator.pushNamed(context, '/settings');
             }),
       ],
     ),
