@@ -30,6 +30,22 @@ A mobile app that uses AI to detect skin diseases in cats from photos. Built wit
 - Supabase account (free tier)
 - Firebase project (for auth)
 
+### Install Dependencies
+
+Run the setup script to install both the Python backend and Flutter app dependencies. It creates a Python virtual environment in `.venv`, installs `requirements.txt`, and runs `flutter pub get`.
+
+```powershell
+# Windows (PowerShell)
+./setup.ps1
+```
+
+```bash
+# macOS / Linux
+./setup.sh
+```
+
+Install just one stack with `-Python`/`-Flutter` (PowerShell) or `--python`/`--flutter` (bash).
+
 ## Repository Note
 
 Mirrored from [Daxz0/feline_skin_disease_detection](https://github.com/Daxz0/feline_skin_disease_detection) for the `pelta-ai` organization. Full git history preserved.
