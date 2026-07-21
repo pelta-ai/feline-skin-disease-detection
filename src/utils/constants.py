@@ -4,6 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
+
 TRAINED_MODELS_PATH = "trained_models"
 TEST_IMAGES_PATH = "test_images"
 TEST_RESULTS_PATH = "test_results"
@@ -36,3 +37,5 @@ BATCH = 32
 SEED = 42
 
 T_VALUE_ENSEMBLE = 1.1187
+
+HF_BUCKET_URI = "hf://buckets/anishanup/felineskindiseasedetectionmodels"

@@ -5,6 +5,7 @@ import keras
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants
 from utils.paths import abs_path
+from utils.load_models_from_hf_bucket import load_models_from_hf_bucket
 
 
 # Models are expensive to load (seconds each), so cache them across calls keyed
@@ -12,9 +13,16 @@ from utils.paths import abs_path
 # the first request and is reused for every prediction after that.
 _MODEL_CACHE = {}
 
-def get_model_paths_ready(model_paths=None):
+def get_model_paths_ready(model_paths: list[str] = None):
     if model_paths is None:
         model_paths = constants.ENSEMBLE_MODEL_PATHS
+
+    model_names = []
+    for path in model_paths:
+        model_names.append(os.path.basename(path))
+
+    for model in model_names:
+        load_models_from_hf_bucket(model)
 
     model_paths_full = [abs_path(p) for p in model_paths]
 
