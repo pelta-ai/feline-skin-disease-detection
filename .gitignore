@@ -56,6 +56,7 @@ app.*.map.json
 
 # Large training data files (not needed for inference)
 *.npz
+*.keras
 
 # Images (stored in Supabase)
 *.png

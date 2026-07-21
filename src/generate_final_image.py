@@ -11,11 +11,6 @@ from src.utils.paths import abs_path
 from src.classifiers.base_classifier import BaseClassifier
 import src.ensemble as ensemble
 
-def warm_up(model_paths=None):
-    paths = ensemble.get_model_paths_ready(model_paths)
-    ensemble.load_ensemble(paths)
-
-
 def generate_final_image(image_path, model_paths=None):
     # Preprocessing is baked into each saved model (Input -> preprocess_input ->
     # backbone), so the raw 0-255 RGB array is fed directly. Average the softmax
