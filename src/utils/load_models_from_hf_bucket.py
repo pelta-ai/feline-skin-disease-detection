@@ -12,15 +12,15 @@ load_dotenv()
 print("token loaded:", bool(os.environ.get("HF_TOKEN")))
 
 remote_file_path = f"{constants.HF_BUCKET_URI}"
-local_file_path = "./trained_models"
+local_file_path = constants.MODEL_DIR
 
-def load_models_from_hf_bucket(filename):
-    os.makedirs("./trained_models", exist_ok=True)
+def load_models_from_hf_bucket(filename, min_bytes=1_000_000):
+    os.makedirs(local_file_path, exist_ok=True)
 
     final_remote_file_path = f"{constants.HF_BUCKET_URI}/{filename}"
     final_local_file_path = os.path.join(local_file_path, filename)
 
-    if os.path.exists(final_local_file_path):
+    if os.path.exists(final_local_file_path) and os.path.getsize(final_local_file_path) > min_bytes:
         return
     
     try:
@@ -43,4 +43,6 @@ def load_models_from_hf_bucket(filename):
             "If the bucket is private, make sure HF_TOKEN is set."
         )
     except Exception as e:
+        if os.path.exists(final_local_file_path):
+            os.remove(final_local_file_path)
         raise Exception(f"\n[ERROR] An unexpected error occurred: {e}")

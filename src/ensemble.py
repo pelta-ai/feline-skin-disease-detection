@@ -21,6 +21,8 @@ def get_model_paths_ready(model_paths: list[str] = None):
     for path in model_paths:
         model_names.append(os.path.basename(path))
 
+    load_models_from_hf_bucket("class_names.json", min_bytes=1)
+
     for model in model_names:
         load_models_from_hf_bucket(model)
 
@@ -44,6 +46,13 @@ def load_ensemble(model_paths_full):
         _MODEL_CACHE[cache_key] = [keras.models.load_model(p) for p in model_paths_full]
         
     return _MODEL_CACHE[cache_key]
+
+def warm_up(model_paths=None):
+    """Load the full ensemble into the resident cache ahead of any prediction.
+    Call this at process startup (e.g. when the Flask app module is imported) so
+    the first scan doesn't pay the multi-second per-model load cost."""
+    paths = get_model_paths_ready(model_paths)
+    return load_ensemble(paths)
 
 def ensemble_predict(arr, model_paths=None, low_mem=False):
     paths = get_model_paths_ready(model_paths)

@@ -37,6 +37,7 @@ nul
 .pub-cache/
 .pub/
 build/
+static/
 
 # Symbolication related
 app.*.symbols

@@ -12,6 +12,15 @@ TEST_RESULTS_PATH = "test_results"
 DATA_PATH = "final_data"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# Single source of truth for where trained models live — used for BOTH the
+# Hugging Face download destination and inference-time loading, so the two can
+# never diverge based on the current working directory. Overridable via the
+# MODEL_DIR env var (e.g. a mounted volume in a container); defaults to
+# <repo-root>/trained_models. Always resolved to an absolute path.
+MODEL_DIR = os.path.abspath(
+    os.environ.get("MODEL_DIR") or os.path.join(PROJECT_ROOT, TRAINED_MODELS_PATH)
+)
+
 CNN_DATA_NPZ_NAME = "feline_skin_disease_sample_data"
 CNN_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_cnn.keras")
 
@@ -22,7 +31,7 @@ CNN_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_cnn.keras")
 # balanced to weight the two architectures equally.
 ENSEMBLE_SEEDS = [1, 2, 3, 4, 5]
 ENSEMBLE_MODEL_PATHS = [
-    os.path.join(TRAINED_MODELS_PATH, f"{arch}_frozen_seed_{seed}.keras")
+    os.path.join(MODEL_DIR, f"{arch}_frozen_seed_{seed}.keras")
     for arch in ("new_mobilenetv3small",)
     for seed in ENSEMBLE_SEEDS
 ]
