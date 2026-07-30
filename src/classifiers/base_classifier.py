@@ -9,17 +9,17 @@ Subclasses only need to implement two methods:
 import os
 from abc import ABC, abstractmethod
 
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
-from sklearn.metrics import ConfusionMatrixDisplay
-import ml_insights as mli
-from scipy.optimize import minimize_scalar
 
 from ..utils import constants
-from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
+
+# matplotlib, sklearn, ml_insights, scipy, and count_image_classes (pandas) are
+# imported lazily inside the training/evaluation methods that use them. The
+# inference path (used by the deployed backend) needs none of them, so the slim
+# production image can omit those heavy deps.
 
 
 class BaseClassifier(ABC):
@@ -109,7 +109,9 @@ class BaseClassifier(ABC):
                       epochs=50, **build_kwargs):
         if self.train_ds is None or self.val_ds is None:
             raise ValueError("Ensure that train_ds and val_ds are already built.")
-        
+
+        from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
+
         counts = count_classes_from_folder_structure()
         total, k = sum(counts.values()), len(counts)
         class_weight = {i: max(total/(k*counts[name]), 1.0)
@@ -166,6 +168,9 @@ class BaseClassifier(ABC):
     
     @staticmethod
     def display_confusion_matrix(cm, class_names, title=None):
+        import matplotlib.pyplot as plt
+        from sklearn.metrics import ConfusionMatrixDisplay
+
         display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
         fig, ax = plt.subplots(figsize=(10, 10))
         values_format = '.1f' if np.asarray(cm).dtype.kind == 'f' else 'd'
@@ -198,6 +203,8 @@ class BaseClassifier(ABC):
         ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
 
         if show_plots == True:
+            import ml_insights as mli
+
             BaseClassifier.display_confusion_matrix(y_true=y_true, y_pred=y_pred)
             rd_before_calib = mli.plot_reliability_diagram(correct, y_prob.max(1), show_histogram=True)
             rd_after_calib = mli.plot_reliability_diagram(correct, y_prob_cal.max(1), show_histogram=True)
@@ -234,9 +241,11 @@ class BaseClassifier(ABC):
     
     @staticmethod
     def display_reliability_diagram(rd, title=None):
+        import matplotlib.pyplot as plt
+
         if rd is None:
             return
-        
+
         fig = rd if hasattr(rd, "number") else plt.gcf()
 
         if title:
@@ -248,6 +257,8 @@ class BaseClassifier(ABC):
 
     @staticmethod
     def fit_temperature_from_probs(y_true, y_prob):
+        from scipy.optimize import minimize_scalar
+
         y = BaseClassifier._to_int(y_true)
         def nll(T):
             p = BaseClassifier.scale(y_prob, T)
