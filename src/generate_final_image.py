@@ -26,7 +26,8 @@ def generate_final_image(image_path, model_paths=None):
 
     indices, confidences = _get_top_k_from_array(avg_probs[0], 3)
     #top = int(np.argmax(avg_probs[0]))
-    final_classes = [get_class_names()[indices[0]], get_class_names()[indices[1]], get_class_names()[indices[2]]]
+    class_names = get_class_names()
+    final_classes = [class_names[indices[0]], class_names[indices[1]], class_names[indices[2]]]
     #confidence = float(avg_probs[0][top])
     print(final_classes, confidences)
 
