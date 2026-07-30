@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 from flask import Flask, request, jsonify, g, send_from_directory, has_app_context
 from flask_cors import CORS
+from flask_limiter import Limiter
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -52,6 +53,27 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 
 # Enable CORS for local development (Flutter web runs on different port)
 CORS(app)
+
+# ============================================
+# Rate Limiting (per-client-IP)
+# ============================================
+# Throttle the compute-heavy prediction endpoint and storage mutations to blunt
+# abuse/DoS once the app is publicly reachable. Behind the HF Spaces proxy the
+# real client IP is in X-Forwarded-For (request.remote_addr is the proxy), so we
+# key on that. In-memory storage is fine: the app runs as a single gunicorn
+# worker, so there is one shared counter.
+def _client_ip():
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+limiter = Limiter(
+    key_func=_client_ip,
+    app=app,
+    storage_uri="memory://",
+    default_limits=[],  # no global limit — static assets and /health stay unthrottled
+)
 
 # ============================================
 # OpenTelemetry Setup (basic tracing)
@@ -139,18 +161,21 @@ def check_folder_exists():
     return jsonify({'exists': exists})
 
 @app.route('/create-user-folder', methods=['POST'])
+@limiter.limit("30 per minute")
 def create_user_folder():
     user_id = request.json.get('user_id')
     storage.create_user_folder(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/create-today-folder', methods=['POST'])
+@limiter.limit("30 per minute")
 def create_today_folder():
     user_id = request.json.get('user_id')
     storage.create_today_folders(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/add-file', methods=['POST'])
+@limiter.limit("30 per minute")
 def upload_file():
     try:
         user_id = request.form.get('user_id')
@@ -221,6 +246,7 @@ def serve_file():
         return jsonify({'error': str(e)}), 500
     
 @app.post("/download-file")
+@limiter.limit("30 per minute")
 def download_from_s3_api():
     file_name = request.form["file_name"]
     s3_key = request.form["s3_key"]
@@ -242,6 +268,7 @@ def get_today_date_api():
     return {"date": StorageProvider.get_today_date()}
 
 @app.post("/generate-ai-predictions")
+@limiter.limit("6 per minute; 60 per hour")
 def generate_ai_predictions():
     try:
         user_id = request.form.get("user_id")
