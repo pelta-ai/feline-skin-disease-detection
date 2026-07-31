@@ -74,6 +74,7 @@ src/duplicate_image_audit/dinov2_features.pt
 *.ico
 
 # Other
-.json
-.txt
-.csv
+*.json
+*.txt
+*.csv
+*.pt
