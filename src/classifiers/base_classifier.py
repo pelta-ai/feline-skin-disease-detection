@@ -109,6 +109,9 @@ class BaseClassifier(ABC):
                       epochs=50, **build_kwargs):
         if self.train_ds is None or self.val_ds is None:
             raise ValueError("Ensure that train_ds and val_ds are already built.")
+
+        for x, y in self.train_ds.take(1):
+            print("PIXEL RANGE:", x.shape, x.numpy().min(), x.numpy().max())
         
         counts = count_classes_from_folder_structure()
         total, k = sum(counts.values()), len(counts)
