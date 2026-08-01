@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 
 TRAINED_MODELS_PATH = "trained_models"
+MODEL_PROBS_PATH = "model_probs"
 TEST_IMAGES_PATH = "test_images"
 TEST_RESULTS_PATH = "test_results"
 

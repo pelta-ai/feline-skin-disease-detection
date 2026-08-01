@@ -24,16 +24,14 @@ from ..data_manipulation.count_image_classes import count_classes_from_folder_st
 
 class BaseClassifier(ABC):
     def __init__(self, data_path=constants.DATA_PATH, img_size=constants.IMG_SIZE,
-                 batch_size=constants.BATCH, base_seed=42):
+                 batch_size=constants.BATCH, base_seed=42, name=None):
         self.data_path = data_path
         self.img_size = img_size
         self.batch_size = batch_size
         self.base_seed = base_seed
         self.class_names = None
         self.num_classes = None
-        self.train_ds = None
-        self.val_ds = None
-        self.test_ds = None
+        self.name = name
 
     # ── abstract hooks ──────────────────────────────────────────────
     @abstractmethod
@@ -45,29 +43,55 @@ class BaseClassifier(ABC):
         """Apply backbone-specific input preprocessing."""
 
     # ── dataset loading ─────────────────────────────────────────────
-    def make_sub_datasets(self):
-        self.train_ds = keras.utils.image_dataset_from_directory(
-            os.path.join(self.data_path, "train"),
-            image_size=self.img_size,
-            batch_size=self.batch_size,
-            shuffle=True,
-            seed=self.base_seed,
-        )
-        self.val_ds = keras.utils.image_dataset_from_directory(
-            os.path.join(self.data_path, "val"),
-            image_size=self.img_size,
-            batch_size=self.batch_size,
-            shuffle=False,
-        )
-        self.test_ds = keras.utils.image_dataset_from_directory(
-            os.path.join(self.data_path, "test"),
-            image_size=self.img_size,
-            batch_size=self.batch_size,
-            shuffle=False,
-        )
+    def make_dataset_from_df(self, df, shuffle=False, seed=None):
+        if self.class_names is None:
+            raise ValueError("Call set_class_names(full_df) first.")
 
-        self.class_names = self.train_ds.class_names
+        idx = {c: i for i, c in enumerate(self.class_names)}   # <-- here
+        paths = df["path"].values
+        labels = df["label"].map(idx).values.astype("int32")
+
+        ds = tf.data.Dataset.from_tensor_slices((paths, labels))
+        if shuffle:
+            ds = ds.shuffle(len(paths), seed=seed, reshuffle_each_iteration=True)
+
+        def _load(path, label):
+            img = tf.io.read_file(path)
+            img = tf.io.decode_image(img, channels=3, expand_animations=False)
+            img = tf.image.resize(img, self.img_size)
+            return tf.cast(img, tf.float32), label
+
+        ds = ds.map(_load, num_parallel_calls=tf.data.AUTOTUNE)
+        return ds.batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
+
+
+    def set_class_names(self, full_df):
+        self.class_names = sorted(full_df["label"].unique())
         self.num_classes = len(self.class_names)
+
+    # def make_sub_datasets(self):
+    #     self.train_ds = keras.utils.image_dataset_from_directory(
+    #         os.path.join(self.data_path, "train"),
+    #         image_size=self.img_size,
+    #         batch_size=self.batch_size,
+    #         shuffle=True,
+    #         seed=self.base_seed,
+    #     )
+    #     self.val_ds = keras.utils.image_dataset_from_directory(
+    #         os.path.join(self.data_path, "val"),
+    #         image_size=self.img_size,
+    #         batch_size=self.batch_size,
+    #         shuffle=False,
+    #     )
+    #     self.test_ds = keras.utils.image_dataset_from_directory(
+    #         os.path.join(self.data_path, "test"),
+    #         image_size=self.img_size,
+    #         batch_size=self.batch_size,
+    #         shuffle=False,
+    #     )
+
+    #     self.class_names = self.train_ds.class_names
+    #     self.num_classes = len(self.class_names)
 
     # ── model building ──────────────────────────────────────────────
     def _set_all_seeds(self, seed: int):
@@ -105,18 +129,21 @@ class BaseClassifier(ABC):
         return model
 
     # ── training ────────────────────────────────────────────────────
-    def train_one_run(self, seed, save_name, save_path=constants.TRAINED_MODELS_PATH,
-                      epochs=50, **build_kwargs):
-        if self.train_ds is None or self.val_ds is None:
-            raise ValueError("Ensure that train_ds and val_ds are already built.")
-
-        for x, y in self.train_ds.take(1):
-            print("PIXEL RANGE:", x.shape, x.numpy().min(), x.numpy().max())
+    def train_one_run(self, train_df, val_df, test_df, seed, strategy, fold=None, epochs=50, keep_models=True, model_save_path=constants.TRAINED_MODELS_PATH, probs_save_path=constants.MODEL_PROBS_PATH, **build_kwargs):
+        train_ds = self.make_dataset_from_df(train_df, shuffle=True, seed=seed)
+        val_ds   = self.make_dataset_from_df(val_df)
+        test_ds  = self.make_dataset_from_df(test_df)
         
-        counts = count_classes_from_folder_structure()
-        total, k = sum(counts.values()), len(counts)
-        class_weight = {i: max(total/(k*counts[name]), 1.0)
-                for i, name in enumerate(self.class_names)}
+        # A fold's train split can miss a rare class entirely. Weight only the
+        # classes actually present; absent ones get a neutral 1.0 (their weight is
+        # never applied, since no sample carries that label).
+        counts = train_df["label"].value_counts().to_dict()
+        total = sum(counts.values())
+        k = sum(1 for name in self.class_names if counts.get(name, 0) > 0)
+        class_weight = {
+            i: max(total / (k * counts[name]), 1.0) if counts.get(name, 0) > 0 else 1.0
+            for i, name in enumerate(self.class_names)
+        }
 
         self._set_all_seeds(seed)
         model = self._build_model(**build_kwargs)
@@ -126,16 +153,29 @@ class BaseClassifier(ABC):
             keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
                                             patience=4, min_lr=1e-6),
         ]
-        history = model.fit(self.train_ds, validation_data=self.val_ds, epochs=epochs, verbose=0, class_weight=class_weight, callbacks=callbacks)
+        history = model.fit(train_ds, validation_data=val_ds, epochs=epochs,
+                        verbose=0, class_weight=class_weight, callbacks=callbacks)
 
-        if save_name is not None:
-            if not save_name.endswith(".keras"):
-                save_name += ".keras"
-            full_save_path = os.path.join(save_path, save_name)
-            os.makedirs(save_path, exist_ok=True)
-            model.save(full_save_path)
+        probs = model.predict(test_ds, verbose=0)
 
-        return model
+        probs_save_name = f"preds_{self.name}_{strategy}_f{fold}_s{seed}.npy"
+        full_probs_save_path = os.path.join(probs_save_path, probs_save_name)
+        os.makedirs(probs_save_path, exist_ok=True)
+        np.save(full_probs_save_path, probs)
+        np.save(os.path.join(probs_save_path, f"preds_val_{self.name}_{strategy}_f{fold}_s{seed}.npy"),
+        model.predict(val_ds, verbose=0))
+        
+        test_df.to_csv(os.path.join(probs_save_path, f"testset_f{fold}.csv"), index=False)
+
+        if keep_models:
+            model_save_name = f"{self.name}_{strategy}_f{fold}_s{seed}.keras"
+            full_model_save_path = os.path.join(model_save_path, model_save_name)
+            os.makedirs(model_save_path, exist_ok=True)
+            model.save(full_model_save_path)
+
+        return dict(arch=self.name, strategy=strategy, fold=fold, seed=seed,
+                epochs_run=len(history.history["loss"]),
+                n_train=len(train_df), n_test=len(test_df))
 
     # ── evaluation ──────────────────────────────────────────────────
     @staticmethod
@@ -167,9 +207,10 @@ class BaseClassifier(ABC):
         macro_f1 = float(np.mean(f1))
         return acc, precision, recall, f1, macro_f1
     
-    @staticmethod
-    def display_confusion_matrix(cm, class_names, title=None):
-        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names)
+    def display_confusion_matrix(self, cm, title=None):
+        if (self.class_names == None):
+            raise ValueError("Ensure that class names are already defined.")
+        display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.class_names)
         fig, ax = plt.subplots(figsize=(10, 10))
         values_format = '.1f' if np.asarray(cm).dtype.kind == 'f' else 'd'
         display.plot(ax=ax, cmap=plt.cm.Blues, values_format=values_format)
@@ -180,14 +221,11 @@ class BaseClassifier(ABC):
         plt.tight_layout()
         plt.show()
 
-    def calibrate_and_evaluate(self, model=None, model_path=None, show_plots=False):
+    def calibrate_and_evaluate(self, test_ds, val_ds, model=None, model_path=None, show_plots=False):
         model = self._check_model_exists(model=model, model_path=model_path)
 
-        if self.test_ds is None:
-            raise ValueError("Ensure that test_ds is already built.")
-
         #y_true is the true label, y_pred is the predicted label, y_prob is the predicted probabilities
-        y_true, y_pred, y_prob = self.collect_y_true_y_pred_probs(model, self.test_ds)
+        y_true, y_pred, y_prob = self.collect_y_true_y_pred_probs(model, test_ds)
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
 
@@ -195,13 +233,13 @@ class BaseClassifier(ABC):
 
         ece_before_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob)
 
-        T = self.fit_temperature(model=model)
+        T = self.fit_temperature(val_ds, model=model)
         y_prob_cal = self.scale(y_prob, T)
 
         ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
 
         if show_plots == True:
-            BaseClassifier.display_confusion_matrix(y_true=y_true, y_pred=y_pred)
+            self.display_confusion_matrix(cm=cm)
             rd_before_calib = mli.plot_reliability_diagram(correct, y_prob.max(1), show_histogram=True)
             rd_after_calib = mli.plot_reliability_diagram(correct, y_prob_cal.max(1), show_histogram=True)
             BaseClassifier.display_reliability_diagram(rd_before_calib)
@@ -274,13 +312,13 @@ class BaseClassifier(ABC):
 
         return ece
 
-    def fit_temperature(self, model=None, model_path=None):
+    def fit_temperature(self, val_ds, model=None, model_path=None):
         model = self._check_model_exists(model=model, model_path=model_path)
 
-        if self.val_ds is None:
+        if val_ds is None:
             raise ValueError("Ensure that test_ds is already built.")
         
-        y_true_val, y_pred, y_prob_val = self.collect_y_true_y_pred_probs(model, self.val_ds)
+        y_true_val, y_pred, y_prob_val = self.collect_y_true_y_pred_probs(model, val_ds)
         return self.fit_temperature_from_probs(y_true_val, y_prob_val)
     
     # ── extras ──────────────────────────────────────────────────
