@@ -61,6 +61,31 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       initialRoute: '/',
+      // On wide screens (web/desktop) the mobile-first UI would otherwise
+      // stretch full-width and look broken. Center it in a phone-width frame on
+      // a neutral backdrop, and tell the subtree it's 480px wide so any
+      // MediaQuery-based sizing behaves like a phone (no overflow). On actual
+      // phones (<=480 logical px) this is a no-op.
+      builder: (context, child) {
+        final content = child ?? const SizedBox.shrink();
+        final mq = MediaQuery.of(context);
+        const maxWidth = 480.0;
+        if (mq.size.width <= maxWidth) return content;
+        return ColoredBox(
+          color: const Color.fromRGBO(28, 33, 32, 1.0), // matches app's dark chrome
+          child: Center(
+            child: ClipRect(
+              child: SizedBox(
+                width: maxWidth,
+                child: MediaQuery(
+                  data: mq.copyWith(size: Size(maxWidth, mq.size.height)),
+                  child: content,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
       routes: {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
