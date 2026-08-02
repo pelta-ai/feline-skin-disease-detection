@@ -6,11 +6,15 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 
 TRAINED_MODELS_PATH = "trained_models"
+MODEL_PROBS_PATH = "model_probs"
 TEST_IMAGES_PATH = "test_images"
 TEST_RESULTS_PATH = "test_results"
 
-DATA_PATH = "final_data"
+DATA_PATH = "new_data"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+DUPLICATE_AUDIT_PATH = os.path.join("src", "duplicate_image_audit")
+DUPLICATE_AUDIT_FEATURES_NAME = "dinov2_features.pt"
 
 CNN_DATA_NPZ_NAME = "feline_skin_disease_sample_data"
 CNN_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_cnn.keras")
