@@ -226,6 +226,33 @@ class TestToInt:
         assert BaseClassifier._to_int([1, 2]).tolist() == [1, 2]
 
 
+class TestLabelsToInt:
+    """String labels from fold_assignments.csv / testset_f*.csv have to land on
+    the same indices the softmax columns were trained in."""
+
+    def test_maps_through_sorted_class_name_order(self, classifier):
+        result = classifier._labels_to_int(["ringworm", "dermatitis", "fungus"])
+
+        assert result.tolist() == [2, 0, 1]
+        assert result.dtype.kind == "i"
+
+    def test_accepts_a_pandas_column(self, classifier):
+        column = pd.Series(["fungus", "fungus", "ringworm"])
+
+        assert classifier._labels_to_int(column).tolist() == [1, 1, 2]
+
+    def test_preserves_row_order(self, classifier):
+        """Probabilities are paired with labels positionally, so any reordering
+        here would silently mislabel every image."""
+        labels = ["fungus", "ringworm", "fungus", "dermatitis"]
+
+        assert classifier._labels_to_int(labels).tolist() == [1, 2, 1, 0]
+
+    def test_unknown_label_raises(self, classifier):
+        with pytest.raises(KeyError):
+            classifier._labels_to_int(["mange"])
+
+
 # ── temperature scaling ──────────────────────────────────────────────
 
 
@@ -309,29 +336,42 @@ class TestFitTemperatureFromProbs:
 
 
 class TestExpectedCalibrationError:
+    """Returns (ece, per-bin counts). The counts are what show whether the ECE
+    rests on a handful of populated bins."""
+
     def test_confident_and_always_right_is_perfectly_calibrated(self):
         probs = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0]])
 
-        assert BaseClassifier.expected_calibration_error(np.array([0, 1, 0]), probs) == pytest.approx(0.0)
+        ece, _ = BaseClassifier.expected_calibration_error(np.array([0, 1, 0]), probs)
+
+        assert ece == pytest.approx(0.0)
 
     def test_confident_and_always_wrong_is_maximally_miscalibrated(self):
         probs = np.array([[1.0, 0.0], [1.0, 0.0]])
 
-        assert BaseClassifier.expected_calibration_error(np.array([1, 1]), probs) == pytest.approx(1.0)
+        ece, _ = BaseClassifier.expected_calibration_error(np.array([1, 1]), probs)
+
+        assert ece == pytest.approx(1.0)
 
     def test_hand_computed_single_bin(self):
         # Four samples all at confidence 0.9 -> one bin; half correct.
         # ECE = 1.0 * |0.9 - 0.5| = 0.4
         probs = np.array([[0.9, 0.1]] * 4)
 
-        assert BaseClassifier.expected_calibration_error(np.array([0, 0, 1, 1]), probs) == pytest.approx(0.4)
+        ece, counts = BaseClassifier.expected_calibration_error(np.array([0, 0, 1, 1]), probs)
+
+        assert ece == pytest.approx(0.4)
+        assert counts[8] == 4  # bins are (lo, hi], so 0.9 lands in (0.8, 0.9]
+        assert sum(counts) == 4
 
     def test_stays_within_zero_and_one(self):
         rng = np.random.default_rng(1)
         probs = rng.dirichlet([1, 1, 1], size=200)
         y_true = rng.integers(0, 3, size=200)
 
-        assert 0.0 <= BaseClassifier.expected_calibration_error(y_true, probs) <= 1.0
+        ece, _ = BaseClassifier.expected_calibration_error(y_true, probs)
+
+        assert 0.0 <= ece <= 1.0
 
     def test_accepts_one_hot_labels(self):
         probs = np.array([[0.9, 0.1], [0.2, 0.8]])
@@ -339,7 +379,98 @@ class TestExpectedCalibrationError:
         flat = BaseClassifier.expected_calibration_error(np.array([0, 1]), probs)
         one_hot = BaseClassifier.expected_calibration_error(np.array([[1, 0], [0, 1]]), probs)
 
-        assert flat == pytest.approx(one_hot)
+        assert flat[0] == pytest.approx(one_hot[0])
+        assert flat[1] == one_hot[1]
+
+    def test_every_sample_lands_in_exactly_one_bin(self):
+        rng = np.random.default_rng(2)
+        probs = rng.dirichlet([1, 1, 1], size=64)
+
+        _, counts = BaseClassifier.expected_calibration_error(rng.integers(0, 3, size=64), probs)
+
+        assert len(counts) == 10  # the default
+        assert sum(counts) == 64
+
+    def test_empty_bins_are_reported_as_zeros(self):
+        """The sparse-bin complaint depends on empty bins being visible rather
+        than silently skipped."""
+        probs = np.array([[0.95, 0.05]] * 3)
+
+        _, counts = BaseClassifier.expected_calibration_error(np.array([0, 0, 0]), probs)
+
+        assert counts == [0] * 9 + [3]
+
+    def test_n_bins_controls_the_binning(self):
+        probs = np.array([[0.9, 0.1]] * 3)
+
+        _, counts = BaseClassifier.expected_calibration_error(np.array([0, 0, 0]), probs, n_bins=4)
+
+        assert counts == [0, 0, 0, 3]  # 0.9 in (0.75, 1.0]
+
+
+class TestBrierScore:
+    def test_perfect_one_hot_prediction_scores_zero(self):
+        probs = np.array([[1.0, 0.0], [0.0, 1.0]])
+
+        assert BaseClassifier.brier_score(np.array([0, 1]), probs) == pytest.approx(0.0)
+
+    def test_confidently_wrong_scores_two(self):
+        """Squared error is summed over classes, so one sample can cost 2."""
+        probs = np.array([[1.0, 0.0]])
+
+        assert BaseClassifier.brier_score(np.array([1]), probs) == pytest.approx(2.0)
+
+    def test_hand_computed(self):
+        # (0.7-1)^2 + (0.3-0)^2 = 0.18 ; (0.4-0)^2 + (0.6-1)^2 = 0.32
+        probs = np.array([[0.7, 0.3], [0.4, 0.6]])
+
+        assert BaseClassifier.brier_score(np.array([0, 1]), probs) == pytest.approx(0.25)
+
+    def test_accepts_one_hot_labels(self):
+        probs = np.array([[0.7, 0.3], [0.4, 0.6]])
+
+        assert BaseClassifier.brier_score(np.array([[1, 0], [0, 1]]), probs) == pytest.approx(
+            BaseClassifier.brier_score(np.array([0, 1]), probs)
+        )
+
+    def test_returns_a_python_float(self):
+        assert isinstance(BaseClassifier.brier_score(np.array([0]), np.array([[1.0, 0.0]])), float)
+
+
+class TestNegativeLogLikelihood:
+    def test_certain_and_correct_scores_zero(self):
+        probs = np.array([[1.0, 0.0], [0.0, 1.0]])
+
+        assert BaseClassifier.negative_log_likelihood(np.array([0, 1]), probs) == pytest.approx(0.0)
+
+    def test_hand_computed(self):
+        probs = np.array([[0.7, 0.3], [0.4, 0.6]])
+        expected = -(np.log(0.7) + np.log(0.6)) / 2
+
+        assert BaseClassifier.negative_log_likelihood(np.array([0, 1]), probs) == pytest.approx(expected)
+
+    def test_only_the_true_class_probability_counts(self):
+        """Unlike Brier, NLL ignores how the remaining mass is spread."""
+        spread = np.array([[0.5, 0.25, 0.25]])
+        lumped = np.array([[0.5, 0.5, 0.0]])
+
+        assert BaseClassifier.negative_log_likelihood(np.array([0]), spread) == pytest.approx(
+            BaseClassifier.negative_log_likelihood(np.array([0]), lumped)
+        )
+
+    def test_zero_probability_on_the_true_class_stays_finite(self):
+        """log(0) would be -inf without the clip."""
+        value = BaseClassifier.negative_log_likelihood(np.array([0]), np.array([[0.0, 1.0]]))
+
+        assert np.isfinite(value)
+        assert value == pytest.approx(-np.log(1e-12))
+
+    def test_accepts_one_hot_labels(self):
+        probs = np.array([[0.7, 0.3], [0.4, 0.6]])
+
+        assert BaseClassifier.negative_log_likelihood(np.array([[1, 0], [0, 1]]), probs) == pytest.approx(
+            BaseClassifier.negative_log_likelihood(np.array([0, 1]), probs)
+        )
 
 
 # ── prediction collection ────────────────────────────────────────────
@@ -639,65 +770,223 @@ class TestCheckModelExists:
         assert loaded.output_shape[-1] == classifier.num_classes
 
 
-class TestFitTemperature:
-    def test_requires_a_validation_dataset(self, classifier):
-        with pytest.raises(ValueError, match="already built"):
-            classifier.fit_temperature(None, model=FakeModel([]))
-
-    def test_requires_a_model_or_path(self, classifier):
-        with pytest.raises(ValueError, match="Provide model or model_path"):
-            classifier.fit_temperature([])
-
-    def test_fits_from_a_validation_dataset(self, classifier):
-        val_ds = [(object(), FakeBatch([0, 1]))]
-        model = FakeModel([[[0.9, 0.05, 0.05], [0.1, 0.8, 0.1]]])
-
-        temperature = classifier.fit_temperature(val_ds, model=model)
-
-        assert 0.05 <= temperature <= 10.0
+# ── end-to-end calibration from saved probabilities ──────────────────
 
 
-# ── end-to-end calibration on a fake model ───────────────────────────
+def write_run(tmp_path, folds, arch="tiny", strategy="frozen", seed=1):
+    """Lays out exactly what train_one_run leaves on disk for one run: per-fold
+    val and test probability arrays, each fold's test rows, and the fold table.
+
+    `folds` is a list of dicts with val_labels / val_probs / test_labels /
+    test_probs. Returns (probs_dir, fold_assignments_path).
+    """
+    probs_dir = tmp_path / "probs"
+    probs_dir.mkdir(exist_ok=True)
+
+    fold_rows = []
+    for k, fold in enumerate(folds):
+        np.save(probs_dir / f"preds_val_{arch}_{strategy}_f{k}_s{seed}.npy",
+                np.asarray(fold["val_probs"], dtype=np.float64))
+        np.save(probs_dir / f"preds_{arch}_{strategy}_f{k}_s{seed}.npy",
+                np.asarray(fold["test_probs"], dtype=np.float64))
+        pd.DataFrame({"label": fold["test_labels"]}).to_csv(
+            probs_dir / f"testset_f{k}.csv", index=False)
+
+        # The real file carries all three roles. Keeping train and test rows in
+        # means a missing role filter would show up as a length mismatch rather
+        # than as quietly shifted labels.
+        for role in ("train", "val", "test"):
+            labels = fold["val_labels"] if role == "val" else fold["test_labels"]
+            fold_rows += [{"fold": k, "role": role, "label": name} for name in labels]
+
+    fold_csv = tmp_path / "fold_assignments.csv"
+    pd.DataFrame(fold_rows).to_csv(fold_csv, index=False)
+
+    return str(probs_dir), str(fold_csv)
+
+
+# dermatitis=0, fungus=1, ringworm=2. Fold 1's second test image is predicted
+# dermatitis but is really ringworm, so pooled accuracy is 3/4.
+TWO_FOLDS = [
+    {
+        "val_labels": ["dermatitis", "fungus"],
+        "val_probs": [[0.8, 0.1, 0.1], [0.1, 0.8, 0.1]],
+        "test_labels": ["dermatitis", "ringworm"],
+        "test_probs": [[0.7, 0.2, 0.1], [0.1, 0.2, 0.7]],
+    },
+    {
+        "val_labels": ["fungus", "ringworm"],
+        "val_probs": [[0.2, 0.6, 0.2], [0.2, 0.2, 0.6]],
+        "test_labels": ["fungus", "ringworm"],
+        "test_probs": [[0.3, 0.5, 0.2], [0.6, 0.2, 0.2]],
+    },
+]
+
+
+@pytest.fixture
+def two_fold_run(tmp_path):
+    return write_run(tmp_path, TWO_FOLDS)
 
 
 class TestCalibrateAndEvaluate:
-    def test_returns_the_full_metric_bundle(self, classifier):
-        test_ds = [(object(), FakeBatch([0, 1]))]
-        val_ds = [(object(), FakeBatch([0, 1]))]
-        model = FakeModel([
-            [[0.8, 0.1, 0.1], [0.2, 0.7, 0.1]],   # test pass
-            [[0.9, 0.05, 0.05], [0.1, 0.8, 0.1]],  # val pass, for temperature
-        ])
+    def test_returns_the_full_metric_bundle(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
 
-        results = classifier.calibrate_and_evaluate(test_ds, val_ds, model=model)
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
 
         assert set(results) == {
+            "arch", "strategy", "seed", "n_images", "temperatures",
             "accuracy", "macro_f1", "per_class_precision", "per_class_recall",
-            "per_class_f1", "confusion_matrix", "temperature",
-            "expected_calibration_error_before_calibration",
-            "expected_calibration_error_after_calibration",
+            "per_class_f1", "confusion_matrix",
+            "ece_before", "ece_after", "bin_counts_before", "bin_counts_after",
+            "brier_before", "brier_after", "nll_before", "nll_after",
             "y_true", "y_prob", "y_prob_cal",
         }
-        assert results["accuracy"] == pytest.approx(1.0)
+        assert (results["arch"], results["strategy"], results["seed"]) == ("tiny", "frozen", 1)
         assert results["confusion_matrix"].shape == (3, 3)
-        assert results["y_prob_cal"].sum(axis=1) == pytest.approx([1.0, 1.0])
-        assert 0.05 <= results["temperature"] <= 10.0
 
-    def test_calibrated_probabilities_keep_the_same_predictions(self, classifier):
-        test_ds = [(object(), FakeBatch([0, 1]))]
-        val_ds = [(object(), FakeBatch([0, 1]))]
-        model = FakeModel([
-            [[0.8, 0.1, 0.1], [0.2, 0.7, 0.1]],
-            [[0.9, 0.05, 0.05], [0.1, 0.8, 0.1]],
+    def test_pools_every_fold_into_one_prediction_set(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        assert results["n_images"] == 4
+        assert results["y_true"].tolist() == [0, 2, 1, 2]
+        assert results["y_prob"].shape == (4, 3)
+        assert results["y_prob"][0].tolist() == pytest.approx([0.7, 0.2, 0.1])
+        assert results["y_prob"][2].tolist() == pytest.approx([0.3, 0.5, 0.2])
+
+    def test_scores_only_the_requested_folds(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=1)
+
+        assert results["n_images"] == 2
+        assert len(results["temperatures"]) == 1
+
+    def test_fits_one_temperature_per_fold(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        assert len(results["temperatures"]) == 2
+        assert all(0.05 <= T <= 10.0 for T in results["temperatures"])
+
+    def test_each_fold_is_scaled_by_its_own_temperature(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        expected = np.concatenate([
+            BaseClassifier.scale(np.array(fold["test_probs"]), T)
+            for fold, T in zip(TWO_FOLDS, results["temperatures"])
         ])
+        assert results["y_prob_cal"] == pytest.approx(expected)
+        assert results["y_prob_cal"].sum(axis=1) == pytest.approx([1.0] * 4)
 
-        results = classifier.calibrate_and_evaluate(test_ds, val_ds, model=model)
+    def test_temperature_is_refit_per_fold_rather_than_shared(self, classifier, tmp_path):
+        """Fold 0's validation set is confidently wrong half the time (needs
+        softening); fold 1's is right but timid (needs sharpening). One shared
+        temperature could not land on both sides of 1.0."""
+        folds = [
+            {
+                "val_labels": ["dermatitis", "fungus"],
+                "val_probs": [[0.9, 0.05, 0.05], [0.9, 0.05, 0.05]],
+                "test_labels": ["dermatitis"],
+                "test_probs": [[0.9, 0.05, 0.05]],
+            },
+            {
+                "val_labels": ["dermatitis", "ringworm"],
+                "val_probs": [[0.6, 0.3, 0.1], [0.1, 0.3, 0.6]],
+                "test_labels": ["ringworm"],
+                "test_probs": [[0.1, 0.3, 0.6]],
+            },
+        ]
+        probs_dir, fold_csv = write_run(tmp_path, folds)
 
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        assert results["temperatures"][0] > 1.0 > results["temperatures"][1]
+
+    def test_discrimination_comes_from_the_uncalibrated_argmax(self, classifier, two_fold_run):
+        """Temperature scaling is monotone, so it must not move accuracy, the
+        confusion matrix, or the per-class scores."""
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        assert results["accuracy"] == pytest.approx(0.75)
         assert (results["y_prob"].argmax(1) == results["y_prob_cal"].argmax(1)).all()
+        assert results["confusion_matrix"].sum() == 4
+        assert results["confusion_matrix"][2, 0] == 1  # ringworm called dermatitis
 
-    def test_requires_a_model_or_path(self, classifier):
-        with pytest.raises(ValueError, match="Provide model or model_path"):
-            classifier.calibrate_and_evaluate([], [])
+    def test_reports_bin_counts_for_both_stages(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+        assert len(results["bin_counts_before"]) == 10
+        assert len(results["bin_counts_after"]) == 10
+        assert sum(results["bin_counts_before"]) == 4
+        assert sum(results["bin_counts_after"]) == 4
+
+    def test_n_bins_is_forwarded(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv,
+                                                    n_folds=2, n_bins=4)
+
+        assert len(results["bin_counts_before"]) == 4
+        assert len(results["bin_counts_after"]) == 4
+
+    def test_calibration_cannot_worsen_nll_when_val_matches_test(self, classifier, tmp_path):
+        """T is chosen to minimise NLL on the validation probabilities. Hand the
+        same rows back as the test set and the fitted T is optimal by
+        construction, so nll_after must not exceed nll_before."""
+        rows = {
+            "val_labels": ["dermatitis", "fungus", "ringworm", "dermatitis"],
+            "val_probs": [[0.95, 0.03, 0.02], [0.9, 0.05, 0.05],
+                          [0.05, 0.05, 0.9], [0.8, 0.1, 0.1]],
+        }
+        rows["test_labels"], rows["test_probs"] = rows["val_labels"], rows["val_probs"]
+        probs_dir, fold_csv = write_run(tmp_path, [rows])
+
+        results = classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=1)
+
+        assert results["nll_after"] <= results["nll_before"] + 1e-9
+
+    def test_requires_class_names(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+        classifier.class_names = None
+
+        with pytest.raises(ValueError, match="set_class_names"):
+            classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+    def test_val_label_count_mismatch_is_reported(self, classifier, tmp_path):
+        """A fold table regenerated after training would silently mispair labels
+        with probabilities; the length check is the only thing that catches it."""
+        probs_dir, fold_csv = write_run(tmp_path, TWO_FOLDS)
+        table = pd.read_csv(fold_csv)
+        dropped = table.index[(table["fold"] == 0) & (table["role"] == "val")][0]
+        table.drop(index=dropped).to_csv(fold_csv, index=False)
+
+        with pytest.raises(ValueError, match="val probs vs"):
+            classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+    def test_test_label_count_mismatch_is_reported(self, classifier, tmp_path):
+        probs_dir, fold_csv = write_run(tmp_path, TWO_FOLDS)
+        testset = os.path.join(probs_dir, "testset_f0.csv")
+        extra = pd.concat([pd.read_csv(testset), pd.DataFrame({"label": ["fungus"]})])
+        extra.to_csv(testset, index=False)
+
+        with pytest.raises(ValueError, match="test probs vs"):
+            classifier.calibrate_and_evaluate(probs_dir, "frozen", 1, fold_csv, n_folds=2)
+
+    def test_missing_probability_file_raises(self, classifier, two_fold_run):
+        probs_dir, fold_csv = two_fold_run
+
+        with pytest.raises(FileNotFoundError):
+            classifier.calibrate_and_evaluate(probs_dir, "finetuned", 1, fold_csv, n_folds=2)
 
 
 class TestDisplayHelpers:
