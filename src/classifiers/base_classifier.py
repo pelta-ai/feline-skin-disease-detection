@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
@@ -221,43 +222,74 @@ class BaseClassifier(ABC):
         plt.tight_layout()
         plt.show()
 
-    def calibrate_and_evaluate(self, test_ds, val_ds, model=None, model_path=None, show_plots=False):
-        model = self._check_model_exists(model=model, model_path=model_path)
+    # ── rewritten: evaluate one seed from saved probabilities ───────
+    def calibrate_and_evaluate(self, probs_dir, strategy, seed,
+                               fold_assignments_path, n_folds=5,
+                               n_bins=10, show_plots=False):
+        if self.class_names is None:
+            raise ValueError("Call set_class_names(full_df) first.")
 
-        #y_true is the true label, y_pred is the predicted label, y_prob is the predicted probabilities
-        y_true, y_pred, y_prob = self.collect_y_true_y_pred_probs(model, test_ds)
+        fa = pd.read_csv(fold_assignments_path)
+        true_parts, raw_parts, cal_parts, temperatures = [], [], [], []
+
+        for k in range(n_folds):
+            # validation: fit this fold's temperature, then discard
+            val_probs = np.load(os.path.join(
+                probs_dir, f"preds_val_{self.name}_{strategy}_f{k}_s{seed}.npy"))
+            val_rows = fa[(fa["fold"] == k) & (fa["role"] == "val")]
+            val_true = self._labels_to_int(val_rows["label"])
+            if len(val_true) != len(val_probs):
+                raise ValueError(f"fold {k}: {len(val_probs)} val probs vs "
+                                 f"{len(val_true)} val labels")
+            T = self.fit_temperature_from_probs(val_true, val_probs)
+            temperatures.append(T)
+
+            # test: apply this fold's temperature
+            test_probs = np.load(os.path.join(
+                probs_dir, f"preds_{self.name}_{strategy}_f{k}_s{seed}.npy"))
+            test_rows = pd.read_csv(os.path.join(probs_dir, f"testset_f{k}.csv"))
+            test_true = self._labels_to_int(test_rows["label"])
+            if len(test_true) != len(test_probs):
+                raise ValueError(f"fold {k}: {len(test_probs)} test probs vs "
+                                 f"{len(test_true)} test labels")
+
+            true_parts.append(test_true)
+            raw_parts.append(test_probs)
+            cal_parts.append(self.scale(test_probs, T))
+
+        y_true = np.concatenate(true_parts)
+        y_prob = np.concatenate(raw_parts)
+        y_prob_cal = np.concatenate(cal_parts)
+        y_pred = y_prob.argmax(1)
+
+        # discrimination: unchanged by temperature scaling
         cm = self._confusion_matrix(y_true, y_pred)
         acc, prec, rec, f1, macro_f1 = self._metrics_from_confusion_matrix(cm)
 
-        correct = (y_pred == y_true).astype(int)
+        ece_before, bins_before = self.expected_calibration_error(y_true, y_prob, n_bins)
+        ece_after, bins_after = self.expected_calibration_error(y_true, y_prob_cal, n_bins)
 
-        ece_before_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob)
-
-        T = self.fit_temperature(val_ds, model=model)
-        y_prob_cal = self.scale(y_prob, T)
-
-        ece_after_calib = self.expected_calibration_error(y_true=y_true, y_prob=y_prob_cal)
-
-        if show_plots == True:
-            self.display_confusion_matrix(cm=cm)
-            rd_before_calib = mli.plot_reliability_diagram(correct, y_prob.max(1), show_histogram=True)
-            rd_after_calib = mli.plot_reliability_diagram(correct, y_prob_cal.max(1), show_histogram=True)
-            BaseClassifier.display_reliability_diagram(rd_before_calib)
-            BaseClassifier.display_reliability_diagram(rd_after_calib)
+        if show_plots:
+            self.display_confusion_matrix(cm, title=f"{self.name} {strategy} s{seed}")
+            correct = (y_pred == y_true).astype(int)
+            self.display_reliability_diagram(mli.plot_reliability_diagram(
+                correct, y_prob.max(1), show_histogram=True))
+            self.display_reliability_diagram(mli.plot_reliability_diagram(
+                correct, y_prob_cal.max(1), show_histogram=True))
 
         return {
-            "accuracy": acc,
-            "macro_f1": macro_f1,
-            "per_class_precision": prec,
-            "per_class_recall": rec,
-            "per_class_f1": f1,
-            "confusion_matrix": cm,
-            "expected_calibration_error_before_calibration": ece_before_calib,
-            "expected_calibration_error_after_calibration": ece_after_calib,
-            "y_true": y_true,
-            "y_prob": y_prob,
-            "y_prob_cal": y_prob_cal,
-            "temperature": T,
+            "arch": self.name, "strategy": strategy, "seed": seed,
+            "n_images": len(y_true), "temperatures": temperatures,
+            "accuracy": acc, "macro_f1": macro_f1,
+            "per_class_precision": prec, "per_class_recall": rec,
+            "per_class_f1": f1, "confusion_matrix": cm,
+            "ece_before": ece_before, "ece_after": ece_after,
+            "bin_counts_before": bins_before, "bin_counts_after": bins_after,
+            "brier_before": self.brier_score(y_true, y_prob),
+            "brier_after": self.brier_score(y_true, y_prob_cal),
+            "nll_before": self.negative_log_likelihood(y_true, y_prob),
+            "nll_after": self.negative_log_likelihood(y_true, y_prob_cal),
+            "y_true": y_true, "y_prob": y_prob, "y_prob_cal": y_prob_cal,
         }
     
     # ── calibration ──────────────────────────────────────────────────
@@ -298,28 +330,36 @@ class BaseClassifier(ABC):
         return float(minimize_scalar(nll, bounds=(0.05, 10.0), method="bounded").x)
     
     @staticmethod
-    def expected_calibration_error(y_true, y_prob, n_bins=15):
+    def expected_calibration_error(y_true, y_prob, n_bins=10):
         y = BaseClassifier._to_int(y_true)
         conf = y_prob.max(1)
         correct = (y_prob.argmax(1) == y).astype(float)
         edges = np.linspace(0.0, 1.0, n_bins + 1)
-        ece, n = 0.0, len(conf)
-
+        ece, n, counts = 0.0, len(conf), []
         for lo, hi in zip(edges[:-1], edges[1:]):
             m = (conf > lo) & (conf <= hi)
+            counts.append(int(m.sum()))
             if m.sum():
                 ece += (m.sum() / n) * abs(conf[m].mean() - correct[m].mean())
+        return float(ece), counts
 
-        return ece
+    @staticmethod
+    def brier_score(y_true, y_prob):
+        y = BaseClassifier._to_int(y_true)
+        onehot = np.eye(y_prob.shape[1])[y]
+        return float(((y_prob - onehot) ** 2).sum(1).mean())
 
-    def fit_temperature(self, val_ds, model=None, model_path=None):
-        model = self._check_model_exists(model=model, model_path=model_path)
+    @staticmethod
+    def negative_log_likelihood(y_true, y_prob):
+        y = BaseClassifier._to_int(y_true)
+        p = y_prob[np.arange(len(y)), y]
+        return float(-np.log(np.clip(p, 1e-12, 1.0)).mean())
 
-        if val_ds is None:
-            raise ValueError("Ensure that test_ds is already built.")
-        
-        y_true_val, y_pred, y_prob_val = self.collect_y_true_y_pred_probs(model, val_ds)
-        return self.fit_temperature_from_probs(y_true_val, y_prob_val)
+    # ── modified: 10 bins, and return per-bin counts ────────────────
+
+    def _labels_to_int(self, labels):
+        idx = {c: i for i, c in enumerate(self.class_names)}
+        return np.array([idx[l] for l in labels], dtype=int)
     
     # ── extras ──────────────────────────────────────────────────
     def _check_model_exists(self, model=None, model_path=None):
