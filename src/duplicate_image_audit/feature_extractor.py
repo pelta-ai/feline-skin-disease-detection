@@ -2,6 +2,8 @@ import os, sys
 from PIL import Image
 import torch
 from transformers import AutoImageProcessor, AutoModel
+import pillow_heif
+import pillow_avif
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants

@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
 
-df = pd.read_csv("group_ids.csv")
+df = pd.read_csv("group_ids_2.csv")
 sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)
 
 all_folds = []
