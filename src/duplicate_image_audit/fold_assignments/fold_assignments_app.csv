@@ -479,7 +479,6 @@ train/feline_acne/acne25_jpg.rf.5AX8yUKn7kIg7nHElijr.jpg,train,feline_acne,acne2
 train/feline_acne/acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,train,feline_acne,acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,g00547,0,train
 train/feline_acne/acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,train,feline_acne,acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,g00492,0,train
 train/feline_acne/acne30_jpg.rf.Ci26XjhIGxdjYiavPswI.jpg,train,feline_acne,acne30_jpg.rf.Ci26XjhIGxdjYiavPswI.jpg,g00550,0,train
-train/feline_acne/acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,train,feline_acne,acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,g00551,0,train
 train/feline_acne/acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,train,feline_acne,acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,g00552,0,train
 train/feline_acne/acne_resized_jpg.rf.CT4nRgaOCS0CcBDmTnXO.jpg,train,feline_acne,acne_resized_jpg.rf.CT4nRgaOCS0CcBDmTnXO.jpg,g00555,0,train
 train/fungal/0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,train,fungal,0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,g00557,0,train
@@ -3181,7 +3180,6 @@ train/feline_acne/acne23_resized_jpg.rf.9f5wKEsPzFuBJKm4JJxL.jpg,train,feline_ac
 train/feline_acne/acne24_resized_jpg.rf.L4klKJu1hLEqySRiVRdq.jpg,train,feline_acne,acne24_resized_jpg.rf.L4klKJu1hLEqySRiVRdq.jpg,g00546,1,train
 train/feline_acne/acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,train,feline_acne,acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,g00547,1,train
 train/feline_acne/acne30_jpg.rf.Ci26XjhIGxdjYiavPswI.jpg,train,feline_acne,acne30_jpg.rf.Ci26XjhIGxdjYiavPswI.jpg,g00550,1,train
-train/feline_acne/acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,train,feline_acne,acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,g00551,1,train
 train/feline_acne/acne34_jpg.rf.iVcQdpXoiuhf0u1zluJb.jpg,train,feline_acne,acne34_jpg.rf.iVcQdpXoiuhf0u1zluJb.jpg,g00553,1,train
 train/feline_acne/acne36_jpg.rf.RUIc1OwlyGnbYwpL50Wg.jpg,train,feline_acne,acne36_jpg.rf.RUIc1OwlyGnbYwpL50Wg.jpg,g00554,1,train
 train/fungal/0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,train,fungal,0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,g00557,1,train
@@ -7735,7 +7733,6 @@ train/feline_acne/83_jpg.rf.JkKXxDjLueCzXEieDWl1.jpg,train,feline_acne,83_jpg.rf
 train/feline_acne/98_jpg.rf.usLce94Zf0RO0NdioH9v.jpg,train,feline_acne,98_jpg.rf.usLce94Zf0RO0NdioH9v.jpg,g00527,2,test
 train/feline_acne/acne09_resized_jpg.rf.YEUPeopviYo7yw9D1ycT.jpg,train,feline_acne,acne09_resized_jpg.rf.YEUPeopviYo7yw9D1ycT.jpg,g00535,2,test
 train/feline_acne/acne17_resized_jpg.rf.7sNhq7LNkQRN47w0h4nz.jpg,train,feline_acne,acne17_resized_jpg.rf.7sNhq7LNkQRN47w0h4nz.jpg,g00541,2,test
-train/feline_acne/acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,train,feline_acne,acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,g00551,2,test
 train/feline_acne/acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,train,feline_acne,acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,g00552,2,test
 train/fungal/1000010541_x16_jpg.rf.ff727664ea8887c04d67c04196b83fee.jpg,train,fungal,1000010541_x16_jpg.rf.ff727664ea8887c04d67c04196b83fee.jpg,g00564,2,test
 train/fungal/1000010613_x4_jpg.rf.42ad83150425744498fc0d36af359db8.jpg,train,fungal,1000010613_x4_jpg.rf.42ad83150425744498fc0d36af359db8.jpg,g00567,2,test
@@ -8627,7 +8624,6 @@ train/feline_acne/acne25_jpg.rf.5AX8yUKn7kIg7nHElijr.jpg,train,feline_acne,acne2
 train/feline_acne/acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,train,feline_acne,acne26_jpg.rf.L1k3uFb3mInBN0KTEwvZ.jpg,g00547,3,train
 train/feline_acne/acne27_jpg.rf.0uCjOn5bebyiLpE3yUOd.jpg,train,feline_acne,acne27_jpg.rf.0uCjOn5bebyiLpE3yUOd.jpg,g00548,3,train
 train/feline_acne/acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,train,feline_acne,acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,g00492,3,train
-train/feline_acne/acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,train,feline_acne,acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,g00551,3,train
 train/feline_acne/acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,train,feline_acne,acne33_jpg.rf.0MXQigjU38AB1RoAYi1j.jpg,g00552,3,train
 train/feline_acne/acne34_jpg.rf.iVcQdpXoiuhf0u1zluJb.jpg,train,feline_acne,acne34_jpg.rf.iVcQdpXoiuhf0u1zluJb.jpg,g00553,3,train
 train/feline_acne/acne_resized_jpg.rf.CT4nRgaOCS0CcBDmTnXO.jpg,train,feline_acne,acne_resized_jpg.rf.CT4nRgaOCS0CcBDmTnXO.jpg,g00555,3,train
@@ -12714,7 +12710,6 @@ train/feline_acne/84_jpg.rf.X42atBIGIYYAxI7G6VkT.jpg,train,feline_acne,84_jpg.rf
 train/feline_acne/acne02_resized_jpg.rf.kgX8WKaa4ghOORydKZR2.jpg,train,feline_acne,acne02_resized_jpg.rf.kgX8WKaa4ghOORydKZR2.jpg,g00531,4,val
 train/feline_acne/acne21_resized_jpg.rf.E140L2peg1H7jwBQKni3.jpg,train,feline_acne,acne21_resized_jpg.rf.E140L2peg1H7jwBQKni3.jpg,g00543,4,val
 train/feline_acne/acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,train,feline_acne,acne29_jpg.rf.eYjxkH2TwHdPG3yOwmF6.jpg,g00492,4,val
-train/feline_acne/acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,train,feline_acne,acne32_jpg.rf.VrfBUefLbqLbsIbRpUlY.jpg,g00551,4,val
 train/fungal/0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,train,fungal,0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.1875017099780ea87c95ae50b739dd0d.jpg,g00557,4,val
 train/fungal/0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.548f49391fea7ed816a1597cca1f69cd.jpg,train,fungal,0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.548f49391fea7ed816a1597cca1f69cd.jpg,g00557,4,val
 train/fungal/0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.6c15fdbac619f88317fd801c5f1ed0c5.jpg,train,fungal,0C55F3D4-F15E-4A8B-B193-5E640F5864EA_jpeg_jpg.rf.6c15fdbac619f88317fd801c5f1ed0c5.jpg,g00557,4,val
