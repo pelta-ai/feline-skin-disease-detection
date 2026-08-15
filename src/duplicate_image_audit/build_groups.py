@@ -56,16 +56,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True,
                     help="folder containing train/ val/ test/ subfolders")
-    ap.add_argument("--audit-dir", default=".",
-                    help="folder holding the *_duplicates*.json files")
-    ap.add_argument("--audit-glob", default="*_duplicates_2.json",
+    ap.add_argument("--audit-dir", default="./src/duplicate_image_audit/duplicate_registaries/",
+                    help="folder holding the *_duplicates_app.json files")
+    ap.add_argument("--audit-glob", default="*_duplicates_app.json",
                     help="which audit files to load from --audit-dir. The _2 "
                          "generation was built against final_data; the "
                          "unsuffixed generation was built against new_data. "
                          "Mixing generations is usually wrong.")
     ap.add_argument("--threshold", type=float, default=0.05,
                     help="max distance to treat as the same group")
-    ap.add_argument("--out", default="group_ids.csv")
+    ap.add_argument("--out", default="group_ids_app.csv")
     args = ap.parse_args()
 
     # 1. Inventory every image on disk.

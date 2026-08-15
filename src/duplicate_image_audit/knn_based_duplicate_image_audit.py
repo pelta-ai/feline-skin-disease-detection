@@ -97,7 +97,7 @@ class KNNDuplicateImageAudit:
 
         return None
 
-    def find_duplicate_images(self, save_duplicates: bool = True, output_dir=None):
+    def find_duplicate_images(self, save_duplicates: bool = True, output_dir=None, output_name_ending="_app"):
         image_paths = list(self.feature_dict.keys())
         buckets = {"close": {}, "medium": {}, "review": {}}
 
@@ -143,13 +143,13 @@ class KNNDuplicateImageAudit:
         )
 
         if save_duplicates:
-            self.save_duplicate_report(buckets, output_dir=output_dir)
+            self.save_duplicate_report(buckets, output_name_ending=output_name_ending, output_dir=output_dir,)
 
         return buckets["close"], buckets["medium"], buckets["review"]
 
-    def save_duplicate_report(self, buckets, output_dir=None):
+    def save_duplicate_report(self, buckets, output_name_ending, output_dir=None):
         """Writes one JSON file per band as a list of records, closest pairs first."""
-        output_dir = abs_path(output_dir or constants.DUPLICATE_AUDIT_PATH)
+        output_dir = abs_path(output_dir or constants.DUPLICATE_REGISTARIES_PATH)
         os.makedirs(output_dir, exist_ok=True)
 
         written = {}
@@ -160,7 +160,7 @@ class KNNDuplicateImageAudit:
                 for (image_a, image_b), distance in sorted(pairs.items(), key=lambda item: item[1])
             ]
 
-            output_path = os.path.join(output_dir, f"{name}_duplicates.json")
+            output_path = os.path.join(output_dir, f"{name}_duplicates{output_name_ending}.json")
             with open(output_path, "w") as json_file:
                 json.dump(records, json_file, indent=4)
 

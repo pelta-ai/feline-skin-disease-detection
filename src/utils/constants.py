@@ -14,6 +14,9 @@ DATA_PATH = "final_data"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 DUPLICATE_AUDIT_PATH = os.path.join("src", "duplicate_image_audit")
+DUPLICATE_REGISTARIES_PATH = os.path.join(DUPLICATE_AUDIT_PATH, "duplicate_registaries")
+FOLD_ASSIGNMENTS_PATH = os.path.join(DUPLICATE_AUDIT_PATH, "fold_assignments")
+GROUP_IDS_PATH = os.path.join(DUPLICATE_AUDIT_PATH, "group_ids")
 DUPLICATE_AUDIT_FEATURES_NAME = "dinov2_features.pt"
 
 CNN_DATA_NPZ_NAME = "feline_skin_disease_sample_data"
