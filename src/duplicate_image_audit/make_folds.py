@@ -1,7 +1,11 @@
 import pandas as pd
+import os, sys
 from sklearn.model_selection import StratifiedGroupKFold
 
-df = pd.read_csv("group_ids.csv")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import utils.constants as constants
+
+df = pd.read_csv(os.path.join(constants.GROUP_IDS_PATH, "group_ids_app.csv"))
 sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)
 
 all_folds = []
@@ -32,5 +36,5 @@ for fold_idx, (train_idx, test_idx) in enumerate(sgkf.split(df, df["label"], df[
     print(f"  groups: train={len(g_tr)}, val={len(g_va)}, test={len(g_te)}")
 
 out = pd.concat(all_folds, ignore_index=True)
-out.to_csv("fold_assignments.csv", index=False)
-print(f"\nwrote {len(out)} rows to fold_assignments.csv")
+out.to_csv("src/duplicate_image_audit/fold_assignments/fold_assignments_app.csv", index=False)
+print(f"\nwrote {len(out)} rows to fold_assignments_app.csv")

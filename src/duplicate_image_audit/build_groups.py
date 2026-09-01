@@ -9,7 +9,7 @@ Usage:
     python build_groups.py --data-root new_data --audit-dir . --out group_ids.csv
 """
 
-import argparse, csv, json, os, re
+import argparse, csv, glob, json, os, re
 from collections import defaultdict
 
 RF = re.compile(r"_jpg\.rf\.[0-9a-f]+\.(jpg|jpeg|png)$", re.I)
@@ -56,11 +56,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-root", required=True,
                     help="folder containing train/ val/ test/ subfolders")
-    ap.add_argument("--audit-dir", default=".",
-                    help="folder holding the *_duplicates.json files")
+    ap.add_argument("--audit-dir", default="./src/duplicate_image_audit/duplicate_registaries/",
+                    help="folder holding the *_duplicates_app.json files")
+    ap.add_argument("--audit-glob", default="*_duplicates_app.json",
+                    help="which audit files to load from --audit-dir. The _2 "
+                         "generation was built against final_data; the "
+                         "unsuffixed generation was built against new_data. "
+                         "Mixing generations is usually wrong.")
     ap.add_argument("--threshold", type=float, default=0.05,
                     help="max distance to treat as the same group")
-    ap.add_argument("--out", default="group_ids.csv")
+    ap.add_argument("--out", default="group_ids_app.csv")
     args = ap.parse_args()
 
     # 1. Inventory every image on disk.
@@ -93,15 +98,36 @@ def main():
         uf.union(rel, f"capture::{cls}::{capture_stem(fn)}")
 
     # 3. Merge in the perceptual/embedding audit pairs.
-    merged = 0
-    for name in ("close_duplicates.json", "medium_duplicates.json",
-                 "review_duplicates.json"):
-        path = os.path.join(args.audit_dir, name)
-        if not os.path.exists(path):
-            continue
+    root_anchor = os.path.basename(os.path.normpath(args.data_root))
+    on_disk = {rel for _, _, _, rel in records}
+    merged = skipped_unparsed = skipped_missing = 0
+
+    # Discover the audit files rather than assuming fixed names. A missing file
+    # used to be skipped in silence, which is indistinguishable from "every pair
+    # was above threshold" -- both report 0 merges.
+    audit_files = sorted(glob.glob(os.path.join(args.audit_dir, args.audit_glob)))
+    if not audit_files:
+        present = sorted(glob.glob(os.path.join(args.audit_dir, "*.json")))
+        raise SystemExit(
+            f"ERROR: no audit files match '{args.audit_glob}' in "
+            f"{os.path.abspath(args.audit_dir)}\n"
+            + (f"  that folder does contain: {[os.path.basename(p) for p in present]}\n"
+               f"  pass --audit-glob to select one of those, or point --audit-dir elsewhere."
+               if present else "  that folder contains no .json files at all."))
+
+    print(f"audit files loaded from {os.path.abspath(args.audit_dir)}:")
+    for path in audit_files:
+        print(f"  {os.path.basename(path)}")
+
+    for path in audit_files:
         for row in json.load(open(path)):
-            a, b = (tolocal(row["image_a"]), tolocal(row["image_b"]))
+            a, b = (tolocal(row["image_a"], root_anchor),
+                    tolocal(row["image_b"], root_anchor))
             if not (a and b):
+                skipped_unparsed += 1
+                continue
+            if a not in on_disk or b not in on_disk:
+                skipped_missing += 1
                 continue
             ca, cb = a.split("/")[1], b.split("/")[1]
             limit = args.threshold if ca == cb else 0.01
@@ -110,6 +136,11 @@ def main():
             uf.union(a, b)
             merged += 1
     print(f"audit pairs merged at distance<={args.threshold}: {merged}")
+    if skipped_unparsed:
+        print(f"  WARNING: {skipped_unparsed} pairs had paths that do not "
+              f"contain a '{root_anchor}' segment and were ignored")
+    if skipped_missing:
+        print(f"  note: {skipped_missing} pairs reference files not on disk")
 
     # 4. Emit group IDs.
     groups = {}
@@ -154,12 +185,22 @@ def main():
           "Everything else just gets grouped.")
 
 
-def tolocal(winpath):
-    """Convert the audit's absolute Windows path to split/cls/filename."""
+def tolocal(winpath, anchor=None):
+    """Convert the audit's absolute Windows path to split/cls/filename.
+
+    The audit JSONs store absolute paths from whatever machine produced them, so
+    we locate the dataset root by name and keep the three segments after it. The
+    anchor is the --data-root basename; matching is case-insensitive and takes
+    the LAST occurrence, so a parent folder that happens to share the name (e.g.
+    C:/Data/.../final_data) cannot hijack the match.
+    """
     parts = winpath.replace("\\", "/").split("/")
-    for anchor in ("new_data", "data"):
-        if anchor in parts:
-            i = parts.index(anchor)
+    anchors = [a.lower() for a in ([anchor] if anchor else []) + ["final_data", "new_data", "data"] if a]
+    lower = [p.lower() for p in parts]
+    for a in anchors:
+        idx = [i for i, p in enumerate(lower) if p == a]
+        if idx:
+            i = idx[-1]
             if len(parts) >= i + 4:
                 return "/".join(parts[i + 1:i + 4])
     return None
