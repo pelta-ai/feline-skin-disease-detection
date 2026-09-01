@@ -11,6 +11,9 @@ supabase>=2.0.0        # Supabase Storage (default)
 boto3>=1.26.0          # AWS S3 (legacy/optional)
 botocore>=1.29.0
 
+# Model Storage - Hugging Face Bucket
+huggingface_hub>=1.5.0  # Buckets API (download_bucket_files); absent before 1.5
+
 # Machine Learning - CNN
 tensorflow>=2.12.0
 keras>=2.12.0
