@@ -27,10 +27,12 @@ CNN_MODEL_PATH = os.path.join(TRAINED_MODELS_PATH, "sample_cnn.keras")
 # and ResNet-50 are complementary on the weaker classes. Probabilities are
 # averaged equally across all models, so keep the per-architecture seed counts
 # balanced to weight the two architectures equally.
-ENSEMBLE_SEEDS = [1, 2, 3, 4, 5]
+ENSEMBLE_SEEDS = [1, 2, 3]  # bucket only holds convnext_tiny f0-f4 x s1-s3
+EENSEMBLE_FOLDS = [3]
 ENSEMBLE_MODEL_PATHS = [
-    os.path.join(TRAINED_MODELS_PATH, f"{arch}_frozen_seed_{seed}.keras")
-    for arch in ("new_mobilenetv3small",)
+    os.path.join(TRAINED_MODELS_PATH, f"{arch}_finetuned_f{fold}_s{seed}.keras")
+    for arch in ("convnext_tiny",)
+    for fold in EENSEMBLE_FOLDS
     for seed in ENSEMBLE_SEEDS
 ]
 
