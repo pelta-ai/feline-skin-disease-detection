@@ -69,9 +69,10 @@ class AppConfig {
   static const String _devBackendUrl = "http://localhost:5000";
 
   /// Production backend URL (Hugging Face Spaces or other hosting)
-  /// TODO: Update this URL after deploying to Hugging Face Spaces
+  /// Web builds are served by the same Flask app that exposes the API, so they
+  /// use their own origin. Mobile builds have to name the Space explicitly.
   static String get _productionBackendUrl =>
-      kIsWeb ? Uri.base.origin : "https://YOURNAME-pelta.hf.space";
+      kIsWeb ? Uri.base.origin : "https://pelta-ai-pelta-ai-backend.hf.space";
 
   /// Returns the backend URL based on current environment
   static String get backendUrl {
