@@ -68,6 +68,10 @@ app.*.map.json
 *.npz
 *.keras
 
+# Duplicate image audit embedding cache (regenerate with feature_extractor.py).
+# The *_duplicates.json reports are left tracked - they are small and worth reviewing.
+src/duplicate_image_audit/dinov2_features.pt
+
 # Images (stored in Supabase)
 *.png
 *.jpg
@@ -78,3 +82,8 @@ app.*.map.json
 *.tiff
 *.svg
 *.ico
+
+# Other
+*.json
+*.txt
+*.pt

@@ -68,4 +68,4 @@ def _preprocess_image(image_path):
     return arr
             
 if __name__ == "__main__":
-    generate_final_image(constants.TEST_IMAGES_PATH + '\\sample_acne_2.jpg')
+    generate_final_image(constants.TEST_IMAGES_PATH + '\\ear_mites_1.jpg')

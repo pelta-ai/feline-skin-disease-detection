@@ -4,12 +4,16 @@ flask-cors>=4.0.0
 flask-limiter>=3.5.0
 gunicorn>=21.0.0
 
-# ML
-tensorflow-cpu>=2.12.0
+# Model Storage - Hugging Face Bucket
+huggingface_hub>=1.5.0  # Buckets API (download_bucket_files); absent before 1.5
+
+# Machine Learning - CNN
+tensorflow>=2.12.0
 keras>=2.12.0
 protobuf<6
 scikit-learn>=1.2.0
 joblib>=1.2.0
+ml_insights>=1.0.0     # Reliability diagrams in BaseClassifier.calibrate_and_evaluate
 
 # Image processing
 opencv-python-headless>=4.7.0
