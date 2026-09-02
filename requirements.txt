@@ -1,15 +1,8 @@
-# Feline Skin Disease Detection - Python Dependencies
-# Install with: pip install -r requirements.txt
-
-# Web Framework
+# Web
 flask>=2.3.0
 flask-cors>=4.0.0
-gunicorn>=21.0.0       # Production WSGI server
-
-# Cloud Storage
-supabase>=2.0.0        # Supabase Storage (default)
-boto3>=1.26.0          # AWS S3 (legacy/optional)
-botocore>=1.29.0
+flask-limiter>=3.5.0
+gunicorn>=21.0.0
 
 # Model Storage - Hugging Face Bucket
 huggingface_hub>=1.5.0  # Buckets API (download_bucket_files); absent before 1.5
@@ -17,28 +10,23 @@ huggingface_hub>=1.5.0  # Buckets API (download_bucket_files); absent before 1.5
 # Machine Learning - CNN
 tensorflow>=2.12.0
 keras>=2.12.0
-protobuf<6             # TF 2.20 bundles protobuf 5.x gencode; protobuf 6.x triggers mismatch warnings
+protobuf<6
 scikit-learn>=1.2.0
 joblib>=1.2.0
 ml_insights>=1.0.0     # Reliability diagrams in BaseClassifier.calibrate_and_evaluate
 
-# Image Processing
-opencv-python>=4.7.0
+# Image processing
+opencv-python-headless>=4.7.0
 Pillow>=9.4.0
 numpy>=1.23.0
 
-# Visualization (optional - for training/testing)
-matplotlib>=3.7.0
+# Model download
+huggingface-hub>=0.20.0
 
-# Testing
-pytest>=7.3.0
-moto>=4.1.0  # AWS mocking
+# Config
+python-dotenv>=1.0.0
 
-# Observability - OpenTelemetry (basic tracing)
+# Observability
 opentelemetry-api>=1.20.0
 opentelemetry-sdk>=1.20.0
 opentelemetry-instrumentation-flask>=0.41b0
-# opentelemetry-exporter-otlp>=1.20.0  # TODO: Uncomment for production (Grafana Cloud, etc.)
-
-# Development
-python-dotenv>=1.0.0  # For .env file support

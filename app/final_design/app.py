@@ -5,8 +5,9 @@ import json
 import tempfile
 import shutil
 from pathlib import Path
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory, has_app_context
 from flask_cors import CORS
+from flask_limiter import Limiter
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -18,24 +19,61 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 
+# Keep the CNN model directory alongside the app so the HF download and
+# inference-time loading resolve to the same place regardless of the process
+# working directory. Must be set BEFORE importing src.utils.constants, which
+# reads MODEL_DIR once at import time. setdefault lets an explicit external
+# MODEL_DIR (e.g. a mounted volume in a container) still win.
+os.environ.setdefault(
+    "MODEL_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "trained_models"),
+)
+
 # Add lib directory to path for imports
 APP_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(APP_DIR))
 
 from lib.storage import get_storage_provider, StorageProvider
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_APP_FILE = Path(__file__).resolve()
+PROJECT_ROOT = (
+    _APP_FILE.parent
+    if (_APP_FILE.parent / "src").is_dir()
+    else _APP_FILE.parents[2]
+)
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(SRC_DIR))
 
 from src.generate_final_image import generate_final_image
+import src.ensemble as ensemble
 import src.utils.constants as constants
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="")
 
 # Enable CORS for local development (Flutter web runs on different port)
 CORS(app)
+
+# ============================================
+# Rate Limiting (per-client-IP)
+# ============================================
+# Throttle the compute-heavy prediction endpoint and storage mutations to blunt
+# abuse/DoS once the app is publicly reachable. Behind the HF Spaces proxy the
+# real client IP is in X-Forwarded-For (request.remote_addr is the proxy), so we
+# key on that. In-memory storage is fine: the app runs as a single gunicorn
+# worker, so there is one shared counter.
+def _client_ip():
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+limiter = Limiter(
+    key_func=_client_ip,
+    app=app,
+    storage_uri="memory://",
+    default_limits=[],  # no global limit — static assets and /health stay unthrottled
+)
 
 # ============================================
 # OpenTelemetry Setup (basic tracing)
@@ -56,7 +94,7 @@ class JSONFormatter(logging.Formatter):
         log_obj = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,
-            "request_id": getattr(g, 'request_id', 'N/A') if hasattr(g, 'request_id') else 'N/A',
+            "request_id": (g.request_id if has_app_context() and hasattr(g, "request_id") else "N/A"),
             "message": record.getMessage(),
             "logger": record.name,
         }
@@ -95,6 +133,21 @@ def log_request(response):
 # Initialize storage provider (can be overridden via STORAGE_PROVIDER env var for testing)
 storage: StorageProvider = get_storage_provider()
 
+# ============================================
+# Model Warm-up
+# ============================================
+# Load the CNN ensemble into the resident cache when this module is imported, so
+# the first scan doesn't pay the multi-second per-model load cost. This runs both
+# under `python app.py` and when a WSGI server (gunicorn/uwsgi) imports the app.
+try:
+    app.logger.info("Warming up CNN ensemble...")
+    ensemble.warm_up()
+    app.logger.info("CNN ensemble ready")
+except Exception as e:
+    # Don't block startup if warm-up fails — models will lazily load on first
+    # scan instead, and the error surfaces there.
+    app.logger.error(f"Model warm-up failed (will load lazily on first scan): {e}")
+
 @app.route('/list-objects', methods=['GET'])
 def list_objects():
     prefix = request.args.get('prefix') or ""
@@ -108,18 +161,21 @@ def check_folder_exists():
     return jsonify({'exists': exists})
 
 @app.route('/create-user-folder', methods=['POST'])
+@limiter.limit("30 per minute")
 def create_user_folder():
     user_id = request.json.get('user_id')
     storage.create_user_folder(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/create-today-folder', methods=['POST'])
+@limiter.limit("30 per minute")
 def create_today_folder():
     user_id = request.json.get('user_id')
     storage.create_today_folders(user_id)
     return jsonify({'status': 'created'})
 
 @app.route('/add-file', methods=['POST'])
+@limiter.limit("30 per minute")
 def upload_file():
     try:
         user_id = request.form.get('user_id')
@@ -190,6 +246,7 @@ def serve_file():
         return jsonify({'error': str(e)}), 500
     
 @app.post("/download-file")
+@limiter.limit("30 per minute")
 def download_from_s3_api():
     file_name = request.form["file_name"]
     s3_key = request.form["s3_key"]
@@ -211,6 +268,7 @@ def get_today_date_api():
     return {"date": StorageProvider.get_today_date()}
 
 @app.post("/generate-ai-predictions")
+@limiter.limit("6 per minute; 60 per hour")
 def generate_ai_predictions():
     try:
         user_id = request.form.get("user_id")
@@ -272,6 +330,13 @@ def health_check():
         "service": "pelta-ai-backend"
     }), 200
 
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+@app.route("/<path:path>")
+def serve_static(path):
+    return send_from_directory("static", path)
 
 if __name__ == "__main__":
     # Configuration via environment variables (secure for production)
@@ -280,4 +345,4 @@ if __name__ == "__main__":
     port = int(os.environ.get('FLASK_PORT', '5000'))
 
     app.logger.info(f"Starting server on {host}:{port} (debug={debug_mode})")
-    app.run(host=host, port=port, debug=debug_mode)
+    app.run(host=host, port=port, debug=debug_mode, use_reloader=False)

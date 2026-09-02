@@ -22,6 +22,7 @@
 // - Deploy Flask backend to Hugging Face Spaces
 // - Update `_productionBackendUrl` with your Space URL
 // - Build with: flutter build apk --dart-define=ENVIRONMENT=production
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 enum Environment {
   development,
@@ -69,8 +70,8 @@ class AppConfig {
 
   /// Production backend URL (Hugging Face Spaces or other hosting)
   /// TODO: Update this URL after deploying to Hugging Face Spaces
-  static const String _productionBackendUrl =
-      "https://YOUR_USERNAME-feline-skin-detection.hf.space";
+  static String get _productionBackendUrl =>
+      kIsWeb ? Uri.base.origin : "https://YOURNAME-pelta.hf.space";
 
   /// Returns the backend URL based on current environment
   static String get backendUrl {

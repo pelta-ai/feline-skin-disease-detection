@@ -13,8 +13,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import utils.constants as constants
 from utils.get_class_names import get_class_names
 
-class_names = get_class_names(os.path.join(constants.DATA_PATH, "train"))
-
 def count_classes_from_csv(csv_path: str) -> dict[str, int]:
     """Count images per category from a classes CSV file."""
     df = pd.read_csv(csv_path)

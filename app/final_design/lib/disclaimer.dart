@@ -109,7 +109,7 @@ class DisclaimerScreen extends StatelessWidget {
                         child: Icon(
                           Icons.health_and_safety_outlined,
                           size: 56,
-                          color: colorGrayDark,
+                          color: colorPrimary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -135,10 +135,10 @@ class DisclaimerScreen extends StatelessWidget {
               TextButton(
                 onPressed: onAccept ?? () => Navigator.of(context).pop(),
                 style: TextButton.styleFrom(
-                  backgroundColor: colorMain,
+                  backgroundColor: colorPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
                 child: Text(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:final_design/utils/constants.dart';
+import 'package:final_design/utils/responsive.dart';
+import 'package:final_design/web_shell.dart';
 import 'package:final_design/drawer.dart';
 import 'package:final_design/diagnosis_detail.dart';
 import 'package:final_design/diagnosis_info.dart';
@@ -11,11 +13,17 @@ class RecentDiagnosisScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isWide(context)) {
+      return const WebShell(
+        active: '/recent_diagnosis',
+        child: RecentDiagnosis(),
+      );
+    }
     return Scaffold(
         appBar: PreferredSize(
             preferredSize: Size.fromHeight(getScreenHeight(context) * 0.20),
             child: AppBar(
-              backgroundColor: colorMain,
+              backgroundColor: colorPrimary,
               automaticallyImplyLeading: true,
               iconTheme: IconThemeData(color: colorWhite),
               flexibleSpace: Stack(
@@ -61,31 +69,34 @@ class RecentDiagnosis extends StatelessWidget {
   Widget build(BuildContext context) {
     final history = DiagnosisStore.history;
 
-    if (history.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.image_search, size: 56, color: colorGrayDark),
-              const SizedBox(height: 12),
-              Text(
-                "No recent diagnoses to show.",
-                style: textThemeColor.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                "Run a scan from the home screen to see results here.",
-                style: textThemeColor.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+    if (isWide(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Recent Diagnosis", style: textThemeColor.displayMedium),
+          const SizedBox(height: 6),
+          Text("Your past scans and their results.",
+              style: textThemeColor.bodyMedium),
+          const SizedBox(height: 24),
+          if (history.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: _emptyState(),
+            )
+          else
+            Wrap(
+              spacing: 20,
+              runSpacing: 20,
+              children: [
+                for (final d in history)
+                  SizedBox(width: 360, child: _DiagnosisCard(diagnosis: d)),
+              ],
+            ),
+        ],
       );
     }
+
+    if (history.isEmpty) return _emptyState();
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -93,6 +104,32 @@ class RecentDiagnosis extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) =>
           _DiagnosisCard(diagnosis: history[index]),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.image_search, size: 56, color: colorGrayDark),
+            const SizedBox(height: 12),
+            Text(
+              "No recent diagnoses to show.",
+              style: textThemeColor.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              "Run a scan from the home screen to see results here.",
+              style: textThemeColor.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -115,6 +152,7 @@ class _DiagnosisCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
+            settings: const RouteSettings(name: '/diagnosis_detail'),
             builder: (_) => DiagnosisDetailScreen(diagnosis: diagnosis),
           ),
         ),

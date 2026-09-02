@@ -1,8 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:final_design/utils/constants.dart';
 
+/// Shared input decoration so all text fields look consistent and modern.
+InputDecoration _fieldDecoration(String hint, {Widget? suffixIcon}) {
+  OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color, width: width),
+      );
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: textThemeColor.bodyMedium?.copyWith(color: colorGrayDark),
+    filled: true,
+    fillColor: colorGray,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    enabledBorder: border(colorBorder, 1),
+    focusedBorder: border(colorPrimary, 1.6),
+    border: border(colorBorder, 1),
+    suffixIcon: suffixIcon,
+  );
+}
+
 class CustomTextFields {
-  /// Standard text field with rounded design
+  /// Standard text field with rounded, modern design
   static Widget buildTextFieldDesign1(
     TextEditingController controller,
     String hint, {
@@ -11,18 +30,8 @@ class CustomTextFields {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: colorGray,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      style: textThemeColor.bodyMedium,
+      style: textThemeColor.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+      decoration: _fieldDecoration(hint),
     );
   }
 }
@@ -51,19 +60,12 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
     return TextField(
       controller: widget.controller,
       obscureText: _obscureText,
-      decoration: InputDecoration(
-        hintText: widget.hint,
-        filled: true,
-        fillColor: colorGray,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
+      style: textThemeColor.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
+      decoration: _fieldDecoration(
+        widget.hint,
         suffixIcon: IconButton(
           icon: Icon(
-            _obscureText ? Icons.visibility_off : Icons.visibility,
+            _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
             color: colorGrayDark,
             size: 20,
           ),
@@ -74,7 +76,6 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
           },
         ),
       ),
-      style: textThemeColor.bodyMedium,
     );
   }
 }

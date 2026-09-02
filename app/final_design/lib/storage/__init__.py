@@ -25,12 +25,12 @@ import os
 from typing import Optional
 
 from lib.storage.storage_provider import StorageProvider
-from lib.storage.s3_provider import S3StorageProvider
 from lib.storage.mock_provider import MockStorageProvider
 
 # Lazy imports - only load when needed
-# This allows running with mock without installing cloud SDKs
+# This allows running with mock without installing cloud SDKs (boto3, supabase)
 SupabaseStorageProvider = None
+S3StorageProvider = None
 
 def _get_supabase_provider():
     global SupabaseStorageProvider
@@ -39,9 +39,15 @@ def _get_supabase_provider():
         SupabaseStorageProvider = _SupabaseStorageProvider
     return SupabaseStorageProvider
 
+def _get_s3_provider():
+    global S3StorageProvider
+    if S3StorageProvider is None:
+        from lib.storage.s3_provider import S3StorageProvider as _S3StorageProvider
+        S3StorageProvider = _S3StorageProvider
+    return S3StorageProvider
+
 __all__ = [
     'StorageProvider',
-    'S3StorageProvider',
     'MockStorageProvider',
     'get_storage_provider',
 ]
@@ -82,7 +88,8 @@ def get_storage_provider(
     if provider_type == 'mock':
         return MockStorageProvider(**kwargs)
     elif provider_type == 's3':
-        return S3StorageProvider(**kwargs)
+        S3Provider = _get_s3_provider()
+        return S3Provider(**kwargs)
     elif provider_type == 'supabase':
         SupabaseProvider = _get_supabase_provider()
         return SupabaseProvider(**kwargs)

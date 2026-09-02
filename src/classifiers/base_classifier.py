@@ -9,18 +9,18 @@ Subclasses only need to implement two methods:
 import os
 from abc import ABC, abstractmethod
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
-from sklearn.metrics import ConfusionMatrixDisplay
-import ml_insights as mli
-from scipy.optimize import minimize_scalar
 
 from ..utils import constants
-from ..data_manipulation.count_image_classes import count_classes_from_folder_structure
+
+# matplotlib, sklearn, ml_insights, scipy, and count_image_classes (pandas) are
+# imported lazily inside the training/evaluation methods that use them. The
+# inference path (used by the deployed backend) needs none of them, so the slim
+# production image can omit those heavy deps.
 
 
 class BaseClassifier(ABC):
@@ -307,9 +307,11 @@ class BaseClassifier(ABC):
     
     @staticmethod
     def display_reliability_diagram(rd, title=None):
+        import matplotlib.pyplot as plt
+
         if rd is None:
             return
-        
+
         fig = rd if hasattr(rd, "number") else plt.gcf()
 
         if title:
@@ -321,6 +323,8 @@ class BaseClassifier(ABC):
 
     @staticmethod
     def fit_temperature_from_probs(y_true, y_prob):
+        from scipy.optimize import minimize_scalar
+
         y = BaseClassifier._to_int(y_true)
         def nll(T):
             p = BaseClassifier.scale(y_prob, T)
