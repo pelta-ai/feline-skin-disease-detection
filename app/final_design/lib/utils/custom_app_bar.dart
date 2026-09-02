@@ -14,31 +14,34 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return PreferredSize(
       preferredSize: Size.fromHeight(height),
       child: AppBar(
-        backgroundColor: colorMain,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        flexibleSpace: Stack(
-          children: [
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 40), // tweak as needed
-                child: Text(
-                  title,
-                  style: textThemeWhite.displayMedium,
-                  textAlign: TextAlign.center,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: headerGradient,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 40), // tweak as needed
+                  child: Text(
+                    title,
+                    style: textThemeWhite.displayMedium,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
-            ),
-            if (action != null)
-              Positioned(
-                top: 40,
-                right: 12,
-                child: action!,
-              ),
-          ],
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              if (action != null)
+                Positioned(
+                  top: 40,
+                  right: 12,
+                  child: action!,
+                ),
+            ],
+          ),
         ),
       ),
     );
