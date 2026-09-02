@@ -19,7 +19,10 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.1'
+          # pubspec.lock requires dart >=3.10.0 / flutter >=3.38.0 (google_fonts
+          # ^8.2.1). Anything older fails at "flutter pub get" with a version
+          # solving error, so keep this at or above 3.38.
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
