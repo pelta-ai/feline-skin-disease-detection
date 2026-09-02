@@ -5,6 +5,8 @@ import 'package:final_design/diagnosis_info.dart';
 import 'package:final_design/diagnosis_store.dart';
 import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
+import 'package:final_design/utils/responsive.dart';
+import 'package:final_design/web_shell.dart';
 
 /// Full breakdown of a single diagnosis: the image, the top predictions with
 /// their confidences, and a reference description for each.
@@ -15,6 +17,70 @@ class DiagnosisDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isWide(context)) return _buildWide(context);
+    return _buildMobile(context);
+  }
+
+  Widget _buildWide(BuildContext context) {
+    final predictions = diagnosis.predictions;
+    return WebShell(
+      active: '/recent_diagnosis',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back, size: 18, color: colorPrimary),
+              label: Text("Back to Recent Diagnosis",
+                  style:
+                      textThemeColor.bodyLarge?.copyWith(color: colorPrimary)),
+              style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.memory(
+                  diagnosis.imageBytes,
+                  width: 380,
+                  height: 380,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 32),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Headline(diagnosis: diagnosis),
+                    const SizedBox(height: 24),
+                    Text(
+                      predictions.length > 1 ? 'Top matches' : 'Result',
+                      style: textThemeColor.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    for (var i = 0; i < predictions.length; i++)
+                      _PredictionCard(
+                        prediction: predictions[i],
+                        rank: i + 1,
+                        isTop: i == 0,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobile(BuildContext context) {
     final predictions = diagnosis.predictions;
 
     return Scaffold(
@@ -76,7 +142,7 @@ class _Headline extends StatelessWidget {
           children: [
             Icon(
               uncertain ? Icons.help_outline : Icons.pets,
-              color: uncertain ? colorGrayDark : colorMain,
+              color: uncertain ? colorGrayDark : colorPrimary,
               size: 26,
             ),
             const SizedBox(width: 8),
@@ -130,7 +196,7 @@ class _PredictionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorWhite,
         borderRadius: BorderRadius.circular(16),
-        border: isTop ? Border.all(color: colorMain, width: 2) : null,
+        border: isTop ? Border.all(color: colorPrimary, width: 2) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,7 +233,7 @@ class _PredictionCard extends StatelessWidget {
               value: fraction,
               minHeight: 8,
               backgroundColor: colorMainLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(colorMain),
+              valueColor: const AlwaysStoppedAnimation<Color>(colorPrimary),
             ),
           ),
           if (description != null) ...[

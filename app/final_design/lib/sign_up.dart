@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/custom_text_fields.dart';
 import 'package:final_design/utils/constants.dart';
+import 'package:final_design/utils/responsive.dart';
+import 'package:final_design/web_shell.dart';
 import 'package:final_design/utils/validators.dart';
 import 'package:final_design/utils/session.dart';
 import 'package:final_design/auth/index.dart';
@@ -13,6 +15,9 @@ class SignUpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isWide(context)) {
+      return const AuthWebScaffold(form: SignUp());
+    }
     return Scaffold(
       appBar: CustomAppBar(
         title: "Pelta AI",
@@ -188,24 +193,36 @@ class _SignUpScreenState extends State<SignUp> {
               hint: "CONFIRM PASSWORD",
             ),
             const SizedBox(height: 20),
-            Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: _isLoading ? null : _signUpAndCreateFolder,
-                  style: TextButton.styleFrom(
-                    backgroundColor: colorMain,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: _isLoading ? null : _signUpAndCreateFolder,
+                style: TextButton.styleFrom(
+                  backgroundColor: colorPrimary,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text("Sign up", style: textThemeWhite.titleSmall),
                 ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : Text("Sign up", style: textThemeWhite.titleSmall),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, '/login'),
+              child: Text(
+                "Already have an account? Sign in",
+                style: textThemeColor.bodySmall
+                    ?.copyWith(decoration: TextDecoration.underline),
               ),
             ),
           ],

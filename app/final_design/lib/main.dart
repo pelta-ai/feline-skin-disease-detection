@@ -11,6 +11,9 @@ import 'package:final_design/disclaimer.dart';
 import 'package:final_design/settings.dart';
 import 'package:final_design/auth/index.dart';
 import 'package:final_design/utils/app_config.dart';
+import 'package:final_design/utils/constants.dart';
+import 'package:final_design/utils/responsive.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:final_design/utils/profile_picture.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -54,6 +57,41 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+/// Tracks the current route name so the global layout wrapper can decide
+/// whether to show the wide "web" shell (Home) or a centered phone frame.
+final ValueNotifier<String> currentRouteName = ValueNotifier<String>('/');
+
+class _RouteNameObserver extends NavigatorObserver {
+  void _update(Route<dynamic>? route) {
+    final name = route?.settings.name;
+    if (name != null) currentRouteName.value = name;
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _update(route);
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _update(previousRoute);
+    super.didPop(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    _update(newRoute);
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    _update(previousRoute);
+    super.didRemove(route, previousRoute);
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -61,29 +99,81 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       initialRoute: '/',
-      // On wide screens (web/desktop) the mobile-first UI would otherwise
-      // stretch full-width and look broken. Center it in a phone-width frame on
-      // a neutral backdrop, and tell the subtree it's 480px wide so any
-      // MediaQuery-based sizing behaves like a phone (no overflow). On actual
-      // phones (<=480 logical px) this is a no-op.
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colorPrimary,
+          brightness: Brightness.light,
+        ).copyWith(primary: colorPrimary, surface: colorCream),
+        scaffoldBackgroundColor: colorCream,
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colorPrimary,
+            foregroundColor: colorWhite,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle:
+                GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: colorPrimary,
+            foregroundColor: colorWhite,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle:
+                GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: colorBlack,
+          contentTextStyle:
+              GoogleFonts.poppins(color: colorWhite, fontSize: 13),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      navigatorObservers: [_RouteNameObserver()],
+      // Global layout wrapper: on wide screens Home renders its own sidebar
+      // "web" shell (full width); every other screen is centered in a phone
+      // frame so it never stretches. On phones this is a no-op passthrough.
       builder: (context, child) {
         final content = child ?? const SizedBox.shrink();
-        final mq = MediaQuery.of(context);
-        const maxWidth = 480.0;
-        if (mq.size.width <= maxWidth) return content;
-        return ColoredBox(
-          color: const Color.fromRGBO(28, 33, 32, 1.0), // matches app's dark chrome
-          child: Center(
-            child: ClipRect(
-              child: SizedBox(
-                width: maxWidth,
-                child: MediaQuery(
-                  data: mq.copyWith(size: Size(maxWidth, mq.size.height)),
-                  child: content,
-                ),
-              ),
-            ),
-          ),
+        return ValueListenableBuilder<String>(
+          valueListenable: currentRouteName,
+          builder: (context, route, _) {
+            final width = MediaQuery.of(context).size.width;
+            // Screens that render their own wide "web" layout must NOT be
+            // phone-framed (PhoneFrame clamps the reported width to 480, which
+            // would make their own isWide() checks fail). At '/', AuthWrapper
+            // shows login (logged out) or Home (verified) — both wide-capable;
+            // only the unverified-email state stays phone-framed.
+            final wideCapable = route == '/'
+                ? !(auth.isLoggedIn && !auth.isEmailVerified)
+                : const {
+                    '/home',
+                    '/login',
+                    '/sign_up',
+                    '/recent_diagnosis',
+                    '/diagnosis_detail',
+                    '/settings',
+                  }.contains(route);
+            if (width >= kWebBreakpoint && wideCapable) {
+              return content; // screen builds its own wide layout
+            }
+            return PhoneFrame(child: content);
+          },
         );
       },
       routes: {

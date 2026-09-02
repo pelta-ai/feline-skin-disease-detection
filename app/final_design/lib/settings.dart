@@ -10,6 +10,8 @@ import 'package:final_design/utils/constants.dart';
 import 'package:final_design/utils/custom_app_bar.dart';
 import 'package:final_design/utils/session.dart';
 import 'package:final_design/utils/profile_picture.dart';
+import 'package:final_design/utils/responsive.dart';
+import 'package:final_design/web_shell.dart';
 
 /// Account and app settings.
 ///
@@ -237,6 +239,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isWide(context)) return _buildWide(context);
+    return _buildMobile(context);
+  }
+
+  Widget _buildMobile(BuildContext context) {
     return Scaffold(
       backgroundColor: colorMainLight,
       appBar: CustomAppBar(
@@ -249,7 +256,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        children: _contentChildren(context),
+      ),
+    );
+  }
+
+  Widget _buildWide(BuildContext context) {
+    return WebShell(
+      active: '/settings',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text("Settings", style: textThemeColor.displayMedium),
+          const SizedBox(height: 24),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _contentChildren(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _contentChildren(BuildContext context) {
+    return [
           _ProfileHeader(onTapPicture: _showPictureOptions),
           const SizedBox(height: 28),
 
@@ -304,7 +337,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: _confirmSignOut,
             style: TextButton.styleFrom(
-              backgroundColor: colorMain,
+              backgroundColor: colorPrimary,
               padding: const EdgeInsets.symmetric(vertical: 18),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
@@ -315,9 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: textThemeWhite.titleSmall?.copyWith(fontSize: 14),
             ),
           ),
-        ],
-      ),
-    );
+    ];
   }
 }
 
