@@ -345,4 +345,4 @@ if __name__ == "__main__":
     port = int(os.environ.get('FLASK_PORT', '5000'))
 
     app.logger.info(f"Starting server on {host}:{port} (debug={debug_mode})")
-    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    app.run(host=host, port=port, debug=debug_mode, use_reloader=False)
