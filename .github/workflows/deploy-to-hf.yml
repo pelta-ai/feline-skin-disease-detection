@@ -16,6 +16,24 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: stable
+          cache: true
+
+      # The Flask app serves the compiled web app from app/final_design/static
+      # (static_folder="static" in app.py). That directory is gitignored build
+      # output, so it has to be rebuilt here - a checkout never contains it.
+      # Must run before the platform directories are deleted below: the build
+      # needs app/final_design/web.
+      - name: Build Flutter web frontend
+        working-directory: app/final_design
+        run: |
+          flutter pub get
+          flutter build web --release --output static
+
       - name: Push to Hugging Face Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -25,6 +43,8 @@ jobs:
           git config user.email "actions@github.com"
           # Remove files not needed for deployment
           rm -rf data/ test_results/ sample_model_data/ notebooks/ *.png
+          # Remove Flutter build intermediates (keep static/, which is the output)
+          rm -rf app/final_design/build app/final_design/.dart_tool
           # Remove Flutter platform directories (only need Flask backend)
           rm -rf app/final_design/macos app/final_design/ios app/final_design/android app/final_design/windows app/final_design/linux app/final_design/web app/final_design/test
           # Use HF-specific README with Space configuration
@@ -32,6 +52,9 @@ jobs:
           # Create a fresh commit without history
           git checkout --orphan hf-deploy
           git add -A
+          # static/ is gitignored build output, but the backend serves it - force it in.
+          # Targeted rather than "add -A -f", which would sweep in every ignored file.
+          git add -f app/final_design/static
           git commit -m "Deploy to Hugging Face Spaces"
           git remote add hf https://huggingface.co/spaces/pelta-ai/pelta-ai-backend || true
           git remote set-url hf https://user:$HF_TOKEN@huggingface.co/spaces/pelta-ai/pelta-ai-backend
