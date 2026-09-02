@@ -54,6 +54,12 @@ jobs:
           cp README_HF.md README.md
           # Create a fresh commit without history
           git checkout --orphan hf-deploy
+          # The Hub rejects raw binaries ("Your push was rejected because it
+          # contains binary files"). Flutter emits six CanvasKit .wasm blobs, so
+          # they have to go through LFS/Xet. Track them BEFORE staging, or the
+          # clean filter never runs and the push is rejected again.
+          git lfs install --local
+          echo '*.wasm filter=lfs diff=lfs merge=lfs -text' >> .gitattributes
           git add -A
           # static/ is gitignored build output, but the backend serves it - force it in.
           # Targeted rather than "add -A -f", which would sweep in every ignored file.
