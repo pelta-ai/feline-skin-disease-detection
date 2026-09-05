@@ -1,5 +1,7 @@
 # Hugging Face Spaces Dockerfile for Pelta AI Backend
-FROM python:3.10-slim
+# Python 3.11+ is required: the pinned keras 3.13 (needed to deserialize the
+# saved models) publishes wheels only for Python >= 3.11.
+FROM python:3.11-slim
 
 WORKDIR /app
 
