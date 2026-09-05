@@ -16,8 +16,12 @@ gunicorn>=21.0.0
 
 huggingface_hub>=1.5.0
 
-tensorflow-cpu>=2.12.0
-keras>=2.12.0
+# Pinned: the saved model weights are serialized with keras 3.13 (its layer
+# config includes quantization_config). An older keras can't deserialize them
+# ("Unrecognized keyword arguments passed to Dense: {'quantization_config'..}"),
+# so keep these matched to the versions the models were trained/validated with.
+tensorflow-cpu==2.20.0
+keras==3.13.0
 protobuf<6
 
 opencv-python-headless>=4.7.0
