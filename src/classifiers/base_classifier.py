@@ -10,7 +10,6 @@ import os
 from abc import ABC, abstractmethod
 
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models
@@ -226,6 +225,8 @@ class BaseClassifier(ABC):
     def calibrate_and_evaluate(self, probs_dir, strategy, seed,
                                fold_assignments_path, n_folds=5,
                                n_bins=10, show_plots=False):
+        import pandas as pd
+
         if self.class_names is None:
             raise ValueError("Call set_class_names(full_df) first.")
 
