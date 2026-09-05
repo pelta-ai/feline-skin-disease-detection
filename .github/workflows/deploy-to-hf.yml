@@ -65,6 +65,6 @@ jobs:
           # Targeted rather than "add -A -f", which would sweep in every ignored file.
           git add -f app/final_design/static
           git commit -m "Deploy to Hugging Face Spaces"
-          git remote add hf https://huggingface.co/spaces/pelta-ai/pelta-ai-backend || true
-          git remote set-url hf https://user:$HF_TOKEN@huggingface.co/spaces/pelta-ai/pelta-ai-backend
+          git remote add hf https://huggingface.co/spaces/anishanup/pelta || true
+          git remote set-url hf https://user:$HF_TOKEN@huggingface.co/spaces/anishanup/pelta
           git push hf hf-deploy:main --force
