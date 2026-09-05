@@ -3,9 +3,11 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV and healthcheck
+# Install system dependencies for OpenCV and healthcheck.
+# libgl1 (not libgl1-mesa-glx, which was dropped in Debian bookworm — the base
+# image — and makes apt-get fail).
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
