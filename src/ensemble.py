@@ -21,7 +21,7 @@ def get_model_paths_ready(model_paths: list[str] = None):
     for path in model_paths:
         model_names.append(os.path.basename(path))
 
-    load_models_from_hf_bucket("class_names.json", min_bytes=1)
+    load_models_from_hf_bucket("class_names.json")
 
     for model in model_names:
         load_models_from_hf_bucket(model)
