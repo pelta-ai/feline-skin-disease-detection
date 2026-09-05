@@ -13,6 +13,12 @@ TEST_RESULTS_PATH = "test_results"
 DATA_PATH = "final_data"
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+# Absolute directory the model weights + class_names.json are downloaded to and
+# loaded from. Must match where load_models_from_hf_bucket writes
+# (PROJECT_ROOT/TRAINED_MODELS_PATH), since get_class_names reads
+# class_names.json from here.
+MODEL_DIR = os.path.join(PROJECT_ROOT, TRAINED_MODELS_PATH)
+
 DUPLICATE_AUDIT_PATH = os.path.join("src", "duplicate_image_audit")
 DUPLICATE_REGISTARIES_PATH = os.path.join(DUPLICATE_AUDIT_PATH, "duplicate_registaries")
 FOLD_ASSIGNMENTS_PATH = os.path.join(DUPLICATE_AUDIT_PATH, "fold_assignments")
