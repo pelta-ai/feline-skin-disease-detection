@@ -12,9 +12,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements first for caching. Use the deploy-only, inference-slim list
+# (tensorflow-cpu, no training/eval deps) rather than the full requirements.txt.
+COPY requirements-hf.txt .
+RUN pip install --no-cache-dir -r requirements-hf.txt
 
 # Copy the entire project
 COPY . .

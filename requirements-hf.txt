@@ -1,0 +1,31 @@
+# Deploy-only requirements for the Hugging Face Space (inference backend).
+#
+# The Dockerfile installs THIS file, not requirements.txt, so the deployed image
+# stays small and actually builds on python:3.10-slim:
+#   - tensorflow-cpu instead of full tensorflow (no unused GPU libs; smaller)
+#   - omits training/eval deps (scikit-learn, joblib, ml_insights, pandas,
+#     matplotlib, scipy). ml_insights pulls splinecalib, which compiles a C
+#     extension and needs gcc (absent from the slim base image). None of these
+#     are used on the inference path — they are lazy-imported in base_classifier.
+#
+# Keep the shared runtime deps below in sync with requirements.txt.
+flask>=2.3.0
+flask-cors>=4.0.0
+flask-limiter>=3.5.0
+gunicorn>=21.0.0
+
+huggingface_hub>=1.5.0
+
+tensorflow-cpu>=2.12.0
+keras>=2.12.0
+protobuf<6
+
+opencv-python-headless>=4.7.0
+Pillow>=9.4.0
+numpy>=1.23.0
+
+python-dotenv>=1.0.0
+
+opentelemetry-api>=1.20.0
+opentelemetry-sdk>=1.20.0
+opentelemetry-instrumentation-flask>=0.41b0
