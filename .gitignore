@@ -89,3 +89,7 @@ src/duplicate_image_audit/dinov2_features.pt
 !requirements.txt
 !requirements-hf.txt
 *.pt
+
+# Node tooling pulled in by CI (wrangler / Cloudflare Pages deploy)
+node_modules/
+.wrangler/

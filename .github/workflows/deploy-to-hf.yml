@@ -68,6 +68,12 @@ jobs:
           git config user.email "actions@github.com"
           # Remove files not needed for deployment
           rm -rf data/ test_results/ sample_model_data/ notebooks/ *.png
+          # The Cloudflare Pages step above installs wrangler into the
+          # workspace, and "git add -A" below would sweep it into the deploy
+          # commit. The Hub rejects any file over 10 MiB, and node_modules
+          # carries two (the workerd binary and wrangler's cli.js.map), so the
+          # push is refused outright. None of it belongs on the Space anyway.
+          rm -rf node_modules .wrangler
           # Remove Flutter build intermediates (keep static/, which is the output)
           rm -rf app/final_design/build app/final_design/.dart_tool
           # Remove Flutter platform directories (only need Flask backend)

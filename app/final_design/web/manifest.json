@@ -1,11 +1,11 @@
 {
-    "name": "final_design",
-    "short_name": "final_design",
+    "name": "Pelta AI",
+    "short_name": "Pelta AI",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "AI-assisted screening for feline skin conditions.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
