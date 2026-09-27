@@ -24,3 +24,9 @@ Flask backend for feline skin disease detection using a CNN ensemble.
 Required:
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_SECRET_KEY` - Supabase secret key
+
+Optional:
+- `ALLOWED_ORIGINS` - Comma-separated list of origins permitted to call the API
+  from a browser (e.g. `https://pelta-ai.com,https://pelta-ai.pages.dev`).
+  Required once the web frontend is served from a CDN rather than by this app.
+  When unset, only local development origins are allowed.
