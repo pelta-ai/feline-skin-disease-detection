@@ -1,5 +1,6 @@
 import os, sys
 import uuid
+import ipaddress
 import logging
 import json
 import tempfile
@@ -51,8 +52,32 @@ import src.utils.constants as constants
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
-# Enable CORS for local development (Flutter web runs on different port)
-CORS(app)
+# ============================================
+# CORS
+# ============================================
+# Only the origins we actually ship from may read API responses. Once the web
+# build is served from a CDN (Cloudflare Pages) instead of this Flask app, the
+# frontend is a different origin and needs to be named here explicitly.
+#
+# Note this is a browser-side control only: it stops other sites' JavaScript
+# from reading responses, and does nothing against a direct client (curl). It is
+# not a substitute for authentication on the endpoints below.
+#
+# flask-cors treats an origin as a regex if it contains any of * \ ] ? $ ^ [ ( ),
+# and matches with re.match(), which is NOT anchored at the end. A pattern like
+# "http://localhost:*" would therefore also match "http://localhost.evil.com",
+# so the dev default is spelled as an explicitly anchored regex. Origins passed
+# via ALLOWED_ORIGINS contain no regex characters in practice (e.g.
+# "https://pelta-ai.com") and so are compared as case-insensitive literals.
+_DEV_ORIGIN_PATTERN = r"^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$"
+
+_configured_origins = [
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+ALLOWED_ORIGINS = _configured_origins or [_DEV_ORIGIN_PATTERN]
+CORS(app, origins=ALLOWED_ORIGINS)
 
 # ============================================
 # Rate Limiting (per-client-IP)
@@ -63,9 +88,28 @@ CORS(app)
 # key on that. In-memory storage is fine: the app runs as a single gunicorn
 # worker, so there is one shared counter.
 def _client_ip():
+    """Best-effort real client IP, resistant to X-Forwarded-For spoofing.
+
+    X-Forwarded-For is a client-supplied header that each proxy *appends* to, so
+    the leftmost entry is whatever the caller invented and the rightmost entries
+    were added by infrastructure we trust. Keying on the leftmost entry lets a
+    caller rotate a fake value per request and bypass every limit below, so walk
+    from the right instead and take the first routable address: any spoofed
+    prefix sits to the left of the address the edge appended and is never
+    reached. Private/loopback hops (the Space's own ingress) are skipped.
+    """
     xff = request.headers.get("X-Forwarded-For", "")
-    if xff:
-        return xff.split(",")[0].strip()
+    for candidate in reversed(xff.split(",")):
+        candidate = candidate.strip()
+        if not candidate:
+            continue
+        try:
+            parsed = ipaddress.ip_address(candidate)
+        except ValueError:
+            continue  # not an IP at all — ignore rather than trust it
+        if parsed.is_private or parsed.is_loopback or parsed.is_link_local:
+            continue
+        return candidate
     return request.remote_addr or "127.0.0.1"
 
 limiter = Limiter(
@@ -148,13 +192,39 @@ except Exception as e:
     # scan instead, and the error surfaces there.
     app.logger.error(f"Model warm-up failed (will load lazily on first scan): {e}")
 
+# ============================================
+# Upload path safety
+# ============================================
+def _safe_upload_path(base_dir, filename):
+    """Resolve an uploaded file's name to a path guaranteed to sit in base_dir.
+
+    Returns (path, None) on success or (None, error_message) if the name is
+    unusable. `filename` comes straight off the wire and cannot be trusted:
+    os.path.join() silently discards its prefix when handed an absolute path
+    (so "/app/final_design/app.py" would overwrite this very file), and "../"
+    segments walk out of the directory. secure_filename() strips both, and the
+    containment re-check catches anything it lets through.
+    """
+    safe_filename = secure_filename(filename or "")
+    if not safe_filename:
+        return None, "invalid_filename"
+
+    resolved_base = Path(base_dir).resolve()
+    candidate = (resolved_base / safe_filename).resolve()
+    if resolved_base != candidate.parent and resolved_base not in candidate.parents:
+        return None, "invalid_file_path"
+
+    return candidate, None
+
 @app.route('/list-objects', methods=['GET'])
+@limiter.limit("30 per minute")
 def list_objects():
     prefix = request.args.get('prefix') or ""
     object_paths = storage.list_objects(prefix=prefix)
     return jsonify(object_paths)
 
 @app.route('/folder-exists', methods=['GET'])
+@limiter.limit("60 per minute")
 def check_folder_exists():
     path = request.args.get('path')
     exists = storage.folder_exists(path)
@@ -185,21 +255,27 @@ def upload_file():
         if not user_id or not file or not is_annotated_str:
             return jsonify({'error': 'user_id, is_annotated, and file are required'}), 400
 
-        # Use a valid temp directory
-        temp_dir = tempfile.gettempdir()
-        temp_path = os.path.join(temp_dir, file.filename)
+        # Use a valid temp directory. The staging path is derived from the
+        # sanitized name, never from the raw one.
+        temp_path_obj, path_error = _safe_upload_path(tempfile.gettempdir(), file.filename)
+        if path_error:
+            return jsonify({'error': path_error}), 400
+
+        temp_path = str(temp_path_obj)
+        safe_filename = temp_path_obj.name
         file.save(temp_path)
 
         # Convert string to boolean for the storage provider
         is_annotated = is_annotated_str.lower() == "true"
-        storage.add_file(file.filename, temp_path, user_id, is_annotated)
+        storage.add_file(safe_filename, temp_path, user_id, is_annotated)
 
-        return jsonify({'status': 'uploaded', 'file': file.filename}), 200
+        return jsonify({'status': 'uploaded', 'file': safe_filename}), 200
     except Exception as e:
         app.logger.error(f"Error uploading file: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/get-file-url', methods=['GET'])
+@limiter.limit("60 per minute")
 def get_file_url():
     try:
         path = request.args.get('path')
@@ -213,6 +289,7 @@ def get_file_url():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/serve-file', methods=['GET'])
+@limiter.limit("60 per minute")
 def serve_file():
     """Serve a file from storage (for mock mode where URLs aren't real)."""
     from flask import Response
@@ -281,14 +358,9 @@ def generate_ai_predictions():
         #    The image is processed in-place and never stored in the cloud.
         local_dir = constants.TEMP_FOLDER_RAW_PATH
         os.makedirs(local_dir, exist_ok=True)
-        safe_filename = secure_filename(file.filename or "")
-        if not safe_filename:
-            return jsonify({"status": "error", "message": "invalid_filename"}), 400
-
-        base_dir = Path(local_dir).resolve()
-        local_path_obj = (base_dir / safe_filename).resolve()
-        if base_dir != local_path_obj.parent and base_dir not in local_path_obj.parents:
-            return jsonify({"status": "error", "message": "invalid_file_path"}), 400
+        local_path_obj, path_error = _safe_upload_path(local_dir, file.filename)
+        if path_error:
+            return jsonify({"status": "error", "message": path_error}), 400
 
         local_path = str(local_path_obj)
         file.save(local_path)
