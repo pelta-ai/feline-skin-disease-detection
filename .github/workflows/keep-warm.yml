@@ -1,0 +1,44 @@
+name: Keep Space warm
+
+# Free CPU Basic Spaces sleep after 48h of inactivity, and waking one costs a
+# container boot plus the multi-second CNN ensemble load in app.py. Ping well
+# inside that window so a real visitor never pays for the cold start.
+#
+# Caveat: GitHub disables scheduled workflows after 60 days with no repository
+# activity. If this project goes quiet, re-enable it from the Actions tab, or
+# move the ping to an external checker (UptimeRobot, cron-job.org) which has no
+# such rule.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # every 6 hours (UTC); runs may be delayed under load
+  workflow_dispatch:
+
+# Actions minutes are free and unlimited on public repositories.
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        env:
+          # Kept inline rather than as a secret: this is a public URL, and a
+          # secret would be masked in the logs where we want to see it.
+          SPACE_URL: https://anishanup-pelta.hf.space
+        run: |
+          # A sleeping Space answers with a holding page while it boots, so
+          # retry rather than treating the first non-200 as a failure. The
+          # generous --max-time covers a full cold start.
+          for attempt in 1 2 3 4 5; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 180 "$SPACE_URL/health" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Space healthy (HTTP $code) on attempt $attempt"
+              exit 0
+            fi
+            echo "Attempt $attempt: HTTP $code - waking, retrying in 30s"
+            sleep 30
+          done
+          echo "::error::Space did not return 200 from /health after 5 attempts"
+          exit 1
