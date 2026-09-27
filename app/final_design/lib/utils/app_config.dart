@@ -20,9 +20,9 @@
 //
 // For production deployment:
 // - Deploy Flask backend to Hugging Face Spaces
-// - Update `_productionBackendUrl` with your Space URL
+// - Point `_defaultBackendUrl` at your Space URL, or pass
+//   --dart-define=BACKEND_URL=... at build time
 // - Build with: flutter build apk --dart-define=ENVIRONMENT=production
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 enum Environment {
   development,
@@ -68,11 +68,20 @@ class AppConfig {
   /// For mobile device testing: use ngrok URL (e.g., "https://abc123.ngrok-free.app")
   static const String _devBackendUrl = "http://localhost:5000";
 
-  /// Production backend URL (Hugging Face Spaces or other hosting)
-  /// Web builds are served by the same Flask app that exposes the API, so they
-  /// use their own origin. Mobile builds have to name the Space explicitly.
+  /// Production backend URL (Hugging Face Space).
+  ///
+  /// Named explicitly for every platform rather than inferred from the page
+  /// origin. The web build is served from a CDN (Cloudflare Pages) and is no
+  /// longer same-origin with the API, so `Uri.base.origin` would resolve to the
+  /// CDN host and every API call would 404.
+  ///
+  /// Override per build without touching this file:
+  ///   flutter build web --dart-define=BACKEND_URL=https://staging.example.com
+  static const String _defaultBackendUrl = "https://anishanup-pelta.hf.space";
+  static const String _backendUrlOverride =
+      String.fromEnvironment("BACKEND_URL");
   static String get _productionBackendUrl =>
-      kIsWeb ? Uri.base.origin : "https://pelta-ai-pelta-ai-backend.hf.space";
+      _backendUrlOverride.isEmpty ? _defaultBackendUrl : _backendUrlOverride;
 
   /// Returns the backend URL based on current environment
   static String get backendUrl {

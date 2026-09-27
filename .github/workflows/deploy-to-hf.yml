@@ -31,11 +31,33 @@ jobs:
       # output, so it has to be rebuilt here - a checkout never contains it.
       # Must run before the platform directories are deleted below: the build
       # needs app/final_design/web.
+      #
+      # ENVIRONMENT=production is required, not optional: AppConfig._envString
+      # is a compile-time constant defaulting to 'development', so without this
+      # the release bundle resolves backendUrl to http://localhost:5000 and
+      # every API call from a visitor's browser hits their own machine. Dart
+      # tree-shakes the unused branch, so the symptom is invisible in the build
+      # log - the production URL simply never appears in main.dart.js.
       - name: Build Flutter web frontend
         working-directory: app/final_design
         run: |
           flutter pub get
-          flutter build web --release --output static
+          flutter build web --release --output static --dart-define=ENVIRONMENT=production
+
+      # Publish the same build to Cloudflare Pages, which serves it from the
+      # CDN instead of the Space's single gunicorn worker. Runs before the
+      # destructive rm -rf / orphan-commit steps below, which rewrite the tree
+      # for the HF push. The Space keeps serving its own copy for now as a
+      # fallback; that can be dropped once the CDN domain is confirmed good.
+      - name: Deploy web build to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy app/final_design/static
+            --project-name=pelta-ai
+            --branch=main
 
       - name: Push to Hugging Face Spaces
         env:
